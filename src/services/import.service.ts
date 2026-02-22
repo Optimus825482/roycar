@@ -319,6 +319,101 @@ interface ImportResult {
   errors: { row: number; reason: string }[];
 }
 
+// ─── Pre-Validation Types ───
+export interface FieldIssue {
+  field: string;
+  fieldLabel: string;
+  currentValue: string;
+  reason: string;
+}
+
+export interface RowValidationIssue {
+  row: number;
+  rowIndex: number;
+  rowData: Record<string, string>;
+  issues: FieldIssue[];
+}
+
+export interface PreValidationResult {
+  validCount: number;
+  problemRows: RowValidationIssue[];
+  totalRows: number;
+}
+
+export interface RowDecision {
+  row: number;
+  action: "import_empty" | "skip" | "fix";
+  fixes?: Record<string, string>;
+}
+
+// ─── Pre-Validate: Satırları aktarmadan önce doğrulama ───
+export function preValidateRows(
+  rows: Record<string, string>[],
+  columnMapping: Record<string, string>,
+  headerRowIndex: number = 0,
+): PreValidationResult {
+  const reverseMap: Record<string, string> = {};
+  for (const [csvCol, sysField] of Object.entries(columnMapping)) {
+    if (sysField && sysField !== "_skip") {
+      reverseMap[sysField] = csvCol;
+    }
+  }
+
+  const rowOffset = headerRowIndex + 2;
+  let validCount = 0;
+  const problemRows: RowValidationIssue[] = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const excelRow = i + rowOffset;
+    const issues: FieldIssue[] = [];
+
+    const fullNameCol = reverseMap.fullName;
+    const emailCol = reverseMap.email;
+
+    const fullName = fullNameCol ? row[fullNameCol]?.trim() : undefined;
+    const email = emailCol ? row[emailCol]?.trim().toLowerCase() : undefined;
+
+    if (!fullName) {
+      issues.push({
+        field: "fullName",
+        fieldLabel: "Ad Soyad",
+        currentValue: fullNameCol ? (row[fullNameCol] || "") : "",
+        reason: "Ad Soyad alanı boş",
+      });
+    }
+
+    if (!email) {
+      issues.push({
+        field: "email",
+        fieldLabel: "E-posta",
+        currentValue: emailCol ? (row[emailCol] || "") : "",
+        reason: "E-posta alanı boş",
+      });
+    } else if (!email.includes("@")) {
+      issues.push({
+        field: "email",
+        fieldLabel: "E-posta",
+        currentValue: email,
+        reason: "Geçersiz e-posta formatı",
+      });
+    }
+
+    if (issues.length > 0) {
+      problemRows.push({
+        row: excelRow,
+        rowIndex: i,
+        rowData: { ...row },
+        issues,
+      });
+    } else {
+      validCount++;
+    }
+  }
+
+  return { validCount, problemRows, totalRows: rows.length };
+}
+
 // Sistem alanları — bunlar Application tablosundaki sabit kolonlara eşleşir
 const SYSTEM_FIELD_KEYS = new Set([
   "fullName",
@@ -473,6 +568,7 @@ export async function importApplications(
   fileName: string,
   formConfigId: bigint,
   headerRowIndex: number = 0,
+  rowDecisions?: RowDecision[],
 ): Promise<ImportResult> {
   const errors: { row: number; reason: string }[] = [];
   let importedCount = 0;
@@ -497,6 +593,14 @@ export async function importApplications(
     }
   }
 
+  // Build decisions map: excelRow → decision
+  const decisionsMap = new Map<number, RowDecision>();
+  if (rowDecisions) {
+    for (const d of rowDecisions) {
+      decisionsMap.set(d.row, d);
+    }
+  }
+
   // Get departments for name matching
   const departments = await prisma.department.findMany();
   const deptMap = new Map(departments.map((d) => [d.name.toLowerCase(), d.id]));
@@ -513,22 +617,76 @@ export async function importApplications(
     const row = rows[i];
     const excelRow = i + rowOffset;
     try {
-      const fullName = row[reverseMap.fullName]?.trim();
-      const email = row[reverseMap.email]?.trim().toLowerCase();
+      let fullName = row[reverseMap.fullName]?.trim();
+      let email = row[reverseMap.email]?.trim().toLowerCase();
       const phone = row[reverseMap.phone]?.trim() || "";
       const deptName = row[reverseMap.department]?.trim() || "";
 
-      if (!fullName || !email) {
-        errors.push({ row: excelRow, reason: "Ad veya e-posta eksik" });
-        skippedCount++;
-        continue;
+      // ─── Validation with user decisions ───
+      const fieldIssues: string[] = [];
+      if (!fullName) fieldIssues.push("fullName");
+      if (!email) {
+        fieldIssues.push("email");
+      } else if (!email.includes("@")) {
+        fieldIssues.push("email");
       }
 
-      // Basic email validation
-      if (!email.includes("@")) {
-        errors.push({ row: excelRow, reason: `Geçersiz e-posta: ${email}` });
-        skippedCount++;
-        continue;
+      if (fieldIssues.length > 0) {
+        const decision = decisionsMap.get(excelRow);
+
+        if (!decision) {
+          // No decision provided → original auto-skip behavior
+          if (!fullName || !email) {
+            errors.push({ row: excelRow, reason: "Ad veya e-posta eksik" });
+          } else {
+            errors.push({ row: excelRow, reason: `Geçersiz e-posta: ${email}` });
+          }
+          skippedCount++;
+          continue;
+        }
+
+        switch (decision.action) {
+          case "skip":
+            errors.push({ row: excelRow, reason: "Kullanıcı kararıyla atlandı" });
+            skippedCount++;
+            continue;
+
+          case "fix":
+            if (decision.fixes) {
+              if (fieldIssues.includes("fullName") && decision.fixes.fullName) {
+                fullName = decision.fixes.fullName.trim();
+                if (reverseMap.fullName) row[reverseMap.fullName] = fullName;
+              }
+              if (fieldIssues.includes("email") && decision.fixes.email) {
+                email = decision.fixes.email.trim().toLowerCase();
+                if (reverseMap.email) row[reverseMap.email] = email;
+              }
+            }
+            // Re-validate after fix
+            if (!fullName) {
+              errors.push({ row: excelRow, reason: "Düzeltmeden sonra ad hâlâ boş" });
+              skippedCount++;
+              continue;
+            }
+            if (email && !email.includes("@")) {
+              errors.push({ row: excelRow, reason: `Düzeltmeden sonra e-posta hâlâ geçersiz: ${email}` });
+              skippedCount++;
+              continue;
+            }
+            break;
+
+          case "import_empty":
+            // Import with problematic fields cleared
+            if (fieldIssues.includes("fullName")) {
+              fullName = "(İsimsiz)";
+              if (reverseMap.fullName) row[reverseMap.fullName] = fullName;
+            }
+            if (fieldIssues.includes("email")) {
+              email = "";
+              if (reverseMap.email) row[reverseMap.email] = "";
+            }
+            break;
+        }
       }
 
       // Find department
@@ -565,30 +723,33 @@ export async function importApplications(
 
       // Check duplicate: aynı form + aynı email + aynı responseSummary → duplicate
       // Aynı form + aynı email + farklı cevaplar → kabul
-      const existingApps = await prisma.application.findMany({
-        where: { email, formConfigId },
-      });
-      if (existingApps.length > 0) {
-        const newSummaryHash = JSON.stringify(
-          Object.entries(responseSummary).sort(([a], [b]) =>
-            a.localeCompare(b),
-          ),
-        );
-        const isDuplicate = existingApps.some((ex) => {
-          const exSummary =
-            (ex.responseSummary as Record<string, string>) || {};
-          const exHash = JSON.stringify(
-            Object.entries(exSummary).sort(([a], [b]) => a.localeCompare(b)),
-          );
-          return newSummaryHash === exHash;
+      // Boş email ise duplicate check atla
+      if (email) {
+        const existingApps = await prisma.application.findMany({
+          where: { email, formConfigId },
         });
-        if (isDuplicate) {
-          errors.push({
-            row: excelRow,
-            reason: `Mükerrer başvuru (aynı cevaplar): ${email}`,
+        if (existingApps.length > 0) {
+          const newSummaryHash = JSON.stringify(
+            Object.entries(responseSummary).sort(([a], [b]) =>
+              a.localeCompare(b),
+            ),
+          );
+          const isDuplicate = existingApps.some((ex) => {
+            const exSummary =
+              (ex.responseSummary as Record<string, string>) || {};
+            const exHash = JSON.stringify(
+              Object.entries(exSummary).sort(([a], [b]) => a.localeCompare(b)),
+            );
+            return newSummaryHash === exHash;
           });
-          skippedCount++;
-          continue;
+          if (isDuplicate) {
+            errors.push({
+              row: excelRow,
+              reason: `Mükerrer başvuru (aynı cevaplar): ${email}`,
+            });
+            skippedCount++;
+            continue;
+          }
         }
       }
 
@@ -613,8 +774,8 @@ export async function importApplications(
           applicationNo: appNo,
           formConfigId,
           departmentId,
-          fullName,
-          email,
+          fullName: fullName || "(İsimsiz)",
+          email: email || "",
           phone,
           status: "new",
           responseSummary: JSON.parse(JSON.stringify(responseSummary)),

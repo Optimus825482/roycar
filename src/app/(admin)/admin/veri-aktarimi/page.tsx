@@ -44,7 +44,27 @@ interface ImportLog {
   createdAt: string;
 }
 
-type Step = "upload" | "mapping" | "result";
+// Pre-validation types (server'dan gelen)
+interface FieldIssue {
+  field: string;
+  fieldLabel: string;
+  currentValue: string;
+  reason: string;
+}
+
+interface RowValidationIssue {
+  row: number;
+  rowIndex: number;
+  rowData: Record<string, string>;
+  issues: FieldIssue[];
+}
+
+interface ReviewDecision {
+  action: "import_empty" | "skip" | "fix";
+  fixes?: Record<string, string>;
+}
+
+type Step = "upload" | "mapping" | "review" | "result";
 
 export default function DataImportPage() {
   const [step, setStep] = useState<Step>("upload");
@@ -69,6 +89,11 @@ export default function DataImportPage() {
     skippedCount: number;
     errors: { row: number; reason: string }[];
   } | null>(null);
+
+  // Review step (problematic rows)
+  const [problemRows, setProblemRows] = useState<RowValidationIssue[]>([]);
+  const [validCount, setValidCount] = useState(0);
+  const [reviewDecisions, setReviewDecisions] = useState<Record<number, ReviewDecision>>({});
 
   // Import logs
   const [logs, setLogs] = useState<ImportLog[]>([]);
@@ -154,10 +179,63 @@ export default function DataImportPage() {
     if (!file) return;
     setImporting(true);
     try {
+      // Phase 1: Pre-validate
+      const validateForm = new FormData();
+      validateForm.append("file", file);
+      validateForm.append("columnMapping", JSON.stringify(columnMapping));
+      validateForm.append("headerRowIndex", String(headerRowIndex));
+      validateForm.append("mode", "validate");
+
+      const valRes = await fetch("/api/admin/import/upload", {
+        method: "POST",
+        body: validateForm,
+      });
+      const valJson = await valRes.json();
+
+      if (valJson.success && valJson.data.problemRows.length > 0) {
+        // There are problematic rows → show review step
+        setProblemRows(valJson.data.problemRows);
+        setValidCount(valJson.data.validCount);
+        // Default all decisions to "skip"
+        const defaults: Record<number, ReviewDecision> = {};
+        for (const pr of valJson.data.problemRows) {
+          defaults[pr.row] = { action: "skip" };
+        }
+        setReviewDecisions(defaults);
+        setStep("review");
+        setImporting(false);
+        return;
+      }
+
+      // No problems → proceed directly to import
+      await executeImport();
+    } catch {
+      toast.error("Veri aktarımı başarısız", {
+        description: "Lütfen dosyayı ve eşleştirmeleri kontrol ederek tekrar deneyin.",
+      });
+    }
+    setImporting(false);
+  };
+
+  const executeImport = async (decisions?: Record<number, ReviewDecision>) => {
+    if (!file) return;
+    setImporting(true);
+    try {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("columnMapping", JSON.stringify(columnMapping));
       formData.append("headerRowIndex", String(headerRowIndex));
+      formData.append("mode", "import");
+
+      // Convert decisions to RowDecision array for server
+      if (decisions && Object.keys(decisions).length > 0) {
+        const rowDecisions = Object.entries(decisions).map(([rowStr, dec]) => ({
+          row: Number(rowStr),
+          action: dec.action,
+          fixes: dec.fixes,
+        }));
+        formData.append("rowDecisions", JSON.stringify(rowDecisions));
+      }
 
       const res = await fetch("/api/admin/import/upload", {
         method: "POST",
@@ -177,6 +255,14 @@ export default function DataImportPage() {
     setImporting(false);
   };
 
+  const handleImportWithDecisions = () => {
+    executeImport(reviewDecisions);
+  };
+
+  const updateDecision = (row: number, decision: ReviewDecision) => {
+    setReviewDecisions((prev) => ({ ...prev, [row]: decision }));
+  };
+
   const reset = () => {
     setStep("upload");
     setFile(null);
@@ -187,6 +273,9 @@ export default function DataImportPage() {
     setResult(null);
     setHeaderRowIndex(0);
     setUploadProgress(0);
+    setProblemRows([]);
+    setValidCount(0);
+    setReviewDecisions({});
   };
 
   // Count mapped fields
@@ -378,7 +467,177 @@ export default function DataImportPage() {
               className="bg-mr-gold hover:bg-mr-gold-dark text-white"
               aria-busy={importing}
             >
-              {importing ? "Aktarılıyor..." : `${totalRows} Satırı Aktar`}
+              {importing ? "Doğrulanıyor..." : `${totalRows} Satırı Aktar`}
+            </Button>
+          </div>
+        </>
+      )}
+
+      {/* Step: Review - Hatalı satırları incele */}
+      {step === "review" && problemRows.length > 0 && (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm text-mr-text-secondary">
+                Hatalı Satırlar ({problemRows.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-mr-success" />
+                  <span><strong>{validCount}</strong> satır sorunsuz aktarılacak</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-mr-warning" />
+                  <span><strong>{problemRows.length}</strong> satırda sorun tespit edildi</span>
+                </div>
+              </div>
+
+              <p className="text-sm text-mr-text-muted">
+                Her satır için aşağıdaki seçeneklerden birini seçin:
+              </p>
+
+              {/* Toplu işlem butonları */}
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const updated: Record<number, ReviewDecision> = {};
+                    for (const pr of problemRows) updated[pr.row] = { action: "skip" };
+                    setReviewDecisions(updated);
+                  }}
+                >
+                  Tümünü Atla
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const updated: Record<number, ReviewDecision> = {};
+                    for (const pr of problemRows) updated[pr.row] = { action: "import_empty" };
+                    setReviewDecisions(updated);
+                  }}
+                >
+                  Tümünü Boş Olarak Aktar
+                </Button>
+              </div>
+
+              {/* Satır listesi */}
+              <div className="max-h-125 overflow-y-auto space-y-3">
+                {problemRows.map((pr) => {
+                  const dec = reviewDecisions[pr.row] || { action: "skip" };
+                  return (
+                    <div
+                      key={pr.row}
+                      className="border rounded-lg p-4 space-y-3 bg-white"
+                    >
+                      {/* Satır başlığı */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="font-mono text-xs">
+                            Satır {pr.row}
+                          </Badge>
+                          {pr.rowData[Object.keys(pr.rowData)[0]] && (
+                            <span className="text-sm text-mr-text-secondary truncate max-w-64">
+                              {pr.rowData[Object.keys(pr.rowData)[0]]}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Sorunlu alanlar */}
+                      {pr.issues.map((issue) => (
+                        <div key={issue.field} className="bg-red-50 rounded p-3 space-y-2">
+                          <div className="flex items-center gap-2 text-sm">
+                            <Badge variant="destructive" className="text-xs">
+                              {issue.fieldLabel}
+                            </Badge>
+                            <span className="text-mr-text-muted">{issue.reason}</span>
+                            {issue.currentValue && (
+                              <code className="bg-red-100 px-2 py-0.5 rounded text-xs text-red-700 max-w-48 truncate inline-block">
+                                {issue.currentValue}
+                              </code>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Karar butonları */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant={dec.action === "skip" ? "default" : "outline"}
+                          onClick={() => updateDecision(pr.row, { action: "skip" })}
+                          className={dec.action === "skip" ? "bg-mr-navy hover:bg-mr-navy-light" : ""}
+                        >
+                          Satırı Atla
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={dec.action === "import_empty" ? "default" : "outline"}
+                          onClick={() => updateDecision(pr.row, { action: "import_empty" })}
+                          className={dec.action === "import_empty" ? "bg-mr-gold hover:bg-mr-gold-dark text-white" : ""}
+                        >
+                          Boş Olarak Aktar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={dec.action === "fix" ? "default" : "outline"}
+                          onClick={() =>
+                            updateDecision(pr.row, {
+                              action: "fix",
+                              fixes: dec.fixes || Object.fromEntries(
+                                pr.issues.map((iss) => [iss.field, iss.currentValue])
+                              ),
+                            })
+                          }
+                          className={dec.action === "fix" ? "bg-mr-success hover:bg-mr-success/90 text-white" : ""}
+                        >
+                          Düzelt
+                        </Button>
+
+                        {/* Düzelt seçilmişse input alanları */}
+                        {dec.action === "fix" && (
+                          <div className="flex flex-wrap gap-2 ml-2">
+                            {pr.issues.map((issue) => (
+                              <div key={issue.field} className="flex items-center gap-1">
+                                <span className="text-xs text-mr-text-muted">{issue.fieldLabel}:</span>
+                                <Input
+                                  className="w-52 h-8 text-sm"
+                                  placeholder={`Doğru ${issue.fieldLabel.toLowerCase()} girin`}
+                                  value={dec.fixes?.[issue.field] ?? issue.currentValue}
+                                  onChange={(e) => {
+                                    const newFixes = { ...(dec.fixes || {}), [issue.field]: e.target.value };
+                                    updateDecision(pr.row, { action: "fix", fixes: newFixes });
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => setStep("mapping")}>
+              Geri
+            </Button>
+            <Button
+              onClick={handleImportWithDecisions}
+              disabled={importing}
+              className="bg-mr-gold hover:bg-mr-gold-dark text-white"
+              aria-busy={importing}
+            >
+              {importing
+                ? "Aktarılıyor..."
+                : `Seçimleri Uygula ve Aktar (${validCount + Object.values(reviewDecisions).filter((d) => d.action !== "skip").length} satır)`}
             </Button>
           </div>
         </>

@@ -6,15 +6,19 @@ import {
   parseXLSX,
   autoMapColumns,
   importApplications,
+  preValidateRows,
 } from "@/services/import.service";
+import type { RowDecision } from "@/services/import.service";
 
-// POST /api/admin/import/upload — Dosya yükle ve aktarım başlat
+// POST /api/admin/import/upload — Dosya yükle, doğrula ve aktarım başlat
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const columnMappingStr = formData.get("columnMapping") as string | null;
     const headerRowIndexStr = formData.get("headerRowIndex") as string | null;
+    const mode = formData.get("mode") as string | null; // "validate" | "import" | null
+    const rowDecisionsStr = formData.get("rowDecisions") as string | null;
 
     if (!file) return apiError("Dosya yüklenmedi.");
 
@@ -56,7 +60,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Import with provided mapping
     const columnMapping = JSON.parse(columnMappingStr) as Record<
       string,
       string
@@ -65,6 +68,24 @@ export async function POST(req: NextRequest) {
       ? parseInt(headerRowIndexStr, 10)
       : headerRowIndex;
 
+    // ─── Validate Mode: Pre-validate rows without importing ───
+    if (mode === "validate") {
+      const validation = preValidateRows(
+        rows,
+        columnMapping,
+        actualHeaderRowIndex,
+      );
+
+      const serialized = JSON.parse(
+        JSON.stringify(validation, (_k, v) =>
+          typeof v === "bigint" ? v.toString() : v,
+        ),
+      );
+
+      return Response.json({ success: true, data: serialized });
+    }
+
+    // ─── Import Mode: Import with optional row decisions ───
     // Get or create a default form config for imports
     let formConfig = await prisma.formConfig.findFirst({
       where: { title: "Import Form" },
@@ -80,12 +101,19 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Parse row decisions if provided
+    let rowDecisions: RowDecision[] | undefined;
+    if (rowDecisionsStr) {
+      rowDecisions = JSON.parse(rowDecisionsStr) as RowDecision[];
+    }
+
     const result = await importApplications(
       rows,
       columnMapping,
       file.name,
       formConfig.id,
       actualHeaderRowIndex,
+      rowDecisions,
     );
 
     const serialized = JSON.parse(
