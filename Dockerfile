@@ -9,7 +9,7 @@ FROM node:20-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
+RUN echo 'DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"' > .env.local
 RUN npx prisma generate && npm run build
 
 # ─── Stage 3: Production (Node + PostgreSQL in same container) ───
@@ -35,10 +35,13 @@ COPY --from=build /app/public ./public
 
 # Copy Prisma files for migrations + generated client
 COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/prisma.config.ts ./prisma.config.ts
 COPY --from=build /app/src/generated ./src/generated
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=build /app/node_modules/prisma ./node_modules/prisma
+COPY --from=build /app/node_modules/dotenv ./node_modules/dotenv
+COPY --from=build /app/node_modules/tsx ./node_modules/tsx
 
 # Copy entrypoint and supervisor config
 COPY docker-entrypoint.sh /docker-entrypoint.sh

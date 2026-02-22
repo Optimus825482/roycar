@@ -28,6 +28,9 @@ su postgres -c "psql -c \"ALTER USER $DB_USER PASSWORD '$DB_PASSWORD';\""
 # ─── 4. Set DATABASE_URL for Prisma ───
 export DATABASE_URL="postgresql://$DB_USER:$DB_PASSWORD@localhost:5432/$DB_NAME"
 
+# Create .env.local for prisma.config.ts
+echo "DATABASE_URL=\"$DATABASE_URL\"" > /app/.env.local
+
 # ─── 5. Run Prisma migrations ───
 echo ">>> Running Prisma migrations..."
 npx prisma migrate deploy 2>/dev/null || echo "Migration warning (may already be applied)"
