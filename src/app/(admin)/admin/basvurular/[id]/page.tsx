@@ -12,6 +12,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface OtherApplication {
   id: string;
@@ -78,14 +87,18 @@ export default function ApplicationDetailPage() {
   const [loading, setLoading] = useState(true);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [emailPending, setEmailPending] = useState<string | null>(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   const fetchDetail = useCallback(async () => {
     try {
       const res = await fetch(`/api/admin/applications/${params.id}`);
       const json = await res.json();
       if (json.success) setApp(json.data);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error("Başvuru bilgileri yüklenemedi", {
+        description: "Lütfen sayfayı yenileyin.",
+      });
     }
     setLoading(false);
   }, [params.id]);
@@ -103,11 +116,46 @@ export default function ApplicationDetailPage() {
         body: JSON.stringify({ status: newStatus }),
       });
       const json = await res.json();
-      if (json.success && app) setApp({ ...app, status: newStatus });
-    } catch (err) {
-      console.error(err);
+      if (json.success && app) {
+        setApp({ ...app, status: newStatus });
+        // E-posta onay dialogunu aç (bildirim yapılabilir durumlar)
+        const notifiable = ["shortlisted", "rejected", "hired"];
+        if (notifiable.includes(newStatus) && app.email) {
+          setEmailPending(newStatus);
+        }
+      }
+    } catch {
+      toast.error("Durum güncellenemedi", {
+        description: "Lütfen tekrar deneyin.",
+      });
     }
     setStatusUpdating(false);
+  };
+
+  const sendEmailNotification = async () => {
+    if (!emailPending) return;
+    setSendingEmail(true);
+    try {
+      const res = await fetch(`/api/admin/applications/${params.id}/notify`, {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success("E-posta gönderildi", {
+          description: `${app?.fullName} adresine bildirim iletildi.`,
+        });
+      } else {
+        toast.error("E-posta gönderilemedi", {
+          description: json.error || "SMTP ayarlarını kontrol edin.",
+        });
+      }
+    } catch {
+      toast.error("E-posta gönderilemedi", {
+        description: "Bağlantı hatası.",
+      });
+    }
+    setSendingEmail(false);
+    setEmailPending(null);
   };
 
   const retryEvaluation = async () => {
@@ -117,8 +165,10 @@ export default function ApplicationDetailPage() {
         method: "POST",
       });
       setTimeout(fetchDetail, 3000);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error("Değerlendirme yeniden başlatılamadı", {
+        description: "Lütfen tekrar deneyin.",
+      });
     }
     setRetrying(false);
   };
@@ -415,6 +465,50 @@ export default function ApplicationDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* E-posta Bildirim Onay Dialogu */}
+      <Dialog
+        open={!!emailPending}
+        onOpenChange={(open) => { if (!open) setEmailPending(null); }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>E-posta Bildirimi Gönder</DialogTitle>
+            <DialogDescription>
+              <strong>{app.fullName}</strong> adaylığı{" "}
+              <strong>
+                {emailPending === "shortlisted"
+                  ? "ön elemeyi geçti"
+                  : emailPending === "rejected"
+                    ? "reddedildi"
+                    : emailPending === "hired"
+                      ? "işe alındı"
+                      : emailPending}
+              </strong>{" "}
+              olarak güncellendi. Adaya durum hakkında e-posta bildirimi gönderilsin mi?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-md bg-muted px-4 py-3 text-sm text-muted-foreground">
+            📧 {app.email}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setEmailPending(null)}
+              disabled={sendingEmail}
+            >
+              Geç
+            </Button>
+            <Button
+              onClick={sendEmailNotification}
+              disabled={sendingEmail}
+              className="bg-mr-navy hover:bg-mr-navy/90"
+            >
+              {sendingEmail ? "Gönderiliyor..." : "E-posta Gönder"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -151,7 +152,15 @@ function TableExportButtons({ content }: { content: string }) {
   return (
     <div className="flex gap-2 mb-2">
       <button
-        onClick={() => exportToExcel(tables, filename)}
+        onClick={async () => {
+          try {
+            await exportToExcel(tables, filename);
+          } catch {
+            toast.error("Excel dışa aktarma başarısız", {
+              description: "Dosya indirilemedi. Lütfen tekrar deneyin.",
+            });
+          }
+        }}
         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
         title="Excel olarak indir"
       >
@@ -174,7 +183,15 @@ function TableExportButtons({ content }: { content: string }) {
         Excel
       </button>
       <button
-        onClick={() => exportToPdf(tables, filename)}
+        onClick={async () => {
+          try {
+            await exportToPdf(tables, filename);
+          } catch {
+            toast.error("PDF dışa aktarma başarısız", {
+              description: "Dosya indirilemedi. Lütfen tekrar deneyin.",
+            });
+          }
+        }}
         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors"
         title="PDF olarak indir"
       >
@@ -235,6 +252,8 @@ export default function ChatPage() {
     speak,
     stopSpeaking,
     isBrowserSupported: isVoiceSupported,
+    micPermissionDenied,
+    clearMicError,
   } = useVoiceChat({
     onTranscript: (text) => {
       if (text.trim() && activeSessionId && !sendingRef.current) {
@@ -246,6 +265,17 @@ export default function ChatPage() {
     minSpeechMs: 600,
     speechRate: ttsSpeechRate,
   });
+
+  // ─── Mic Permission Feedback ───
+  useEffect(() => {
+    if (!micPermissionDenied) return;
+    toast.error("Mikrofon erişimi reddedildi", {
+      description:
+        "Tarayıcı adres çubuğundaki kilit simgesinden mikrofon iznini açın ve sayfayı yenileyin.",
+      duration: 7000,
+    });
+    clearMicError();
+  }, [micPermissionDenied, clearMicError]);
 
   // Fetch TTS speech rate from settings
   useEffect(() => {
@@ -287,8 +317,10 @@ export default function ChatPage() {
       const res = await fetch(url);
       const json = await res.json();
       if (json.success) setSessions(json.data);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error("Sohbet listesi yüklenemedi", {
+        description: "Lütfen sayfayı yenileyin.",
+      });
     }
     setLoadingSessions(false);
   }, []);
@@ -298,8 +330,10 @@ export default function ChatPage() {
       const res = await fetch(`/api/admin/chat/sessions/${sessionId}/messages`);
       const json = await res.json();
       if (json.success) setMessages(json.data);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error("Mesajlar yüklenemedi", {
+        description: "Lütfen tekrar deneyin.",
+      });
     }
   }, []);
 
@@ -336,8 +370,10 @@ export default function ChatPage() {
         setMessages([]);
         return json.data.id as string;
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error("Yeni sohbet oluşturulamadı", {
+        description: "Lütfen tekrar deneyin.",
+      });
     }
     return null;
   }, []);
@@ -400,8 +436,10 @@ export default function ChatPage() {
         }
       }
       setConfirmDelete(null);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error("Sohbet silinemedi", {
+        description: "Lütfen tekrar deneyin.",
+      });
     }
   };
 
@@ -420,8 +458,10 @@ export default function ChatPage() {
           setMessages([]);
         }
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error("Arşivleme başarısız", {
+        description: "Lütfen tekrar deneyin.",
+      });
     }
   };
 
@@ -475,10 +515,109 @@ export default function ChatPage() {
         }
         exitBulkMode();
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error("İşlem başarısız", {
+        description: "Toplu işlem gerçekleştirilemedi. Lütfen tekrar deneyin.",
+      });
     }
     setBulkRunning(false);
+  };
+
+  // ─── Shared SSE streaming helper ───
+  // onResponse is called once with the final assistant message content.
+  const streamChatSSE = async (
+    text: string,
+    onResponse?: (content: string) => void,
+  ) => {
+    abortRef.current = new AbortController();
+    const res = await fetch(
+      `/api/admin/chat/sessions/${activeSessionId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-username": adminUsername,
+        },
+        body: JSON.stringify({ message: text, stream: true }),
+        signal: abortRef.current.signal,
+      },
+    );
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const contentType = res.headers.get("content-type") || "";
+
+    if (contentType.includes("text/event-stream") && res.body) {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let accumulated = "";
+      let doneReceived = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith("data: ")) continue;
+
+          try {
+            const data = JSON.parse(trimmed.slice(6));
+            if (data.replace && data.content) {
+              accumulated = data.content;
+              setStreamingContent(accumulated);
+            } else if (data.token) {
+              accumulated += data.token;
+              setStreamingContent(accumulated);
+            }
+            if (data.done && data.message) {
+              doneReceived = true;
+              setStreamingContent("");
+              setMessages((prev) => [...prev, data.message]);
+              onResponse?.(data.message.content);
+            }
+            if (data.error) {
+              doneReceived = true;
+              setStreamingContent("");
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: `err-${Date.now()}`,
+                  role: "assistant",
+                  content: data.error,
+                  createdAt: new Date().toISOString(),
+                },
+              ]);
+            }
+          } catch {
+            // skip malformed SSE
+          }
+        }
+      }
+
+      if (!doneReceived && accumulated.trim()) {
+        setStreamingContent("");
+        const fallbackMsg: ChatMessage = {
+          id: `stream-${Date.now()}`,
+          role: "assistant",
+          content: accumulated,
+          createdAt: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, fallbackMsg]);
+        onResponse?.(accumulated);
+      }
+    } else {
+      const json = await res.json();
+      if (json.success) {
+        setMessages((prev) => [...prev, json.data]);
+        onResponse?.(json.data.content);
+      }
+    }
   };
 
   const sendMessage = async () => {
@@ -489,105 +628,20 @@ export default function ChatPage() {
     setSending(true);
     setStreamingContent("");
 
-    const tempUserMsg: ChatMessage = {
-      id: `temp-${Date.now()}`,
-      role: "user",
-      content: userMsg,
-      createdAt: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, tempUserMsg]);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `temp-${Date.now()}`,
+        role: "user",
+        content: userMsg,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
 
     try {
-      abortRef.current = new AbortController();
-      const res = await fetch(
-        `/api/admin/chat/sessions/${activeSessionId}/messages`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-admin-username": adminUsername,
-          },
-          body: JSON.stringify({ message: userMsg, stream: true }),
-          signal: abortRef.current.signal,
-        },
-      );
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-      const contentType = res.headers.get("content-type") || "";
-
-      if (contentType.includes("text/event-stream") && res.body) {
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let accumulated = "";
-        let doneReceived = false;
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || !trimmed.startsWith("data: ")) continue;
-
-            try {
-              const data = JSON.parse(trimmed.slice(6));
-              if (data.replace && data.content) {
-                // SQL query result — replace accumulated content
-                accumulated = data.content;
-                setStreamingContent(accumulated);
-              } else if (data.token) {
-                accumulated += data.token;
-                setStreamingContent(accumulated);
-              }
-              if (data.done && data.message) {
-                doneReceived = true;
-                setStreamingContent("");
-                setMessages((prev) => [...prev, data.message]);
-              }
-              if (data.error) {
-                doneReceived = true;
-                setStreamingContent("");
-                setMessages((prev) => [
-                  ...prev,
-                  {
-                    id: `err-${Date.now()}`,
-                    role: "assistant",
-                    content: data.error,
-                    createdAt: new Date().toISOString(),
-                  },
-                ]);
-              }
-            } catch {
-              // skip malformed SSE
-            }
-          }
-        }
-
-        if (!doneReceived && accumulated.trim()) {
-          setStreamingContent("");
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `stream-${Date.now()}`,
-              role: "assistant",
-              content: accumulated,
-              createdAt: new Date().toISOString(),
-            },
-          ]);
-        }
-      } else {
-        const json = await res.json();
-        if (json.success) setMessages((prev) => [...prev, json.data]);
-      }
+      await streamChatSSE(userMsg);
     } catch (err) {
       if ((err as Error).name !== "AbortError") {
-        console.error(err);
         setStreamingContent("");
         setMessages((prev) => [
           ...prev,
@@ -633,116 +687,26 @@ export default function ChatPage() {
     setSending(true);
     setStreamingContent("");
 
-    const tempUserMsg: ChatMessage = {
-      id: `temp-${Date.now()}`,
-      role: "user",
-      content: text,
-      createdAt: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, tempUserMsg]);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `temp-${Date.now()}`,
+        role: "user",
+        content: text,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
 
     try {
-      abortRef.current = new AbortController();
-      const res = await fetch(
-        `/api/admin/chat/sessions/${activeSessionId}/messages`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-admin-username": adminUsername,
-          },
-          body: JSON.stringify({ message: text, stream: true }),
-          signal: abortRef.current.signal,
-        },
-      );
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const contentType = res.headers.get("content-type") || "";
-
-      if (contentType.includes("text/event-stream") && res.body) {
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let accumulated = "";
-        let doneReceived = false;
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || !trimmed.startsWith("data: ")) continue;
-            try {
-              const data = JSON.parse(trimmed.slice(6));
-              if (data.replace && data.content) {
-                // SQL query result — replace accumulated content
-                accumulated = data.content;
-                setStreamingContent(accumulated);
-              } else if (data.token) {
-                accumulated += data.token;
-                setStreamingContent(accumulated);
-              }
-              if (data.done && data.message) {
-                doneReceived = true;
-                setStreamingContent("");
-                setMessages((prev) => [...prev, data.message]);
-                // Speak the response in voice mode — use refs to avoid stale closure
-                if (pendingVoiceResponseRef.current) {
-                  speakRef.current(data.message.content);
-                }
-                pendingVoiceResponseRef.current = false;
-              }
-              if (data.error) {
-                doneReceived = true;
-                setStreamingContent("");
-                pendingVoiceResponseRef.current = false;
-                setMessages((prev) => [
-                  ...prev,
-                  {
-                    id: `err-${Date.now()}`,
-                    role: "assistant",
-                    content: data.error,
-                    createdAt: new Date().toISOString(),
-                  },
-                ]);
-              }
-            } catch {
-              // skip
-            }
-          }
+      await streamChatSSE(text, (content) => {
+        // Speak the response in voice mode
+        if (pendingVoiceResponseRef.current) {
+          speakRef.current(content);
         }
-
-        if (!doneReceived && accumulated.trim()) {
-          setStreamingContent("");
-          const fallbackMsg = {
-            id: `stream-${Date.now()}`,
-            role: "assistant" as const,
-            content: accumulated,
-            createdAt: new Date().toISOString(),
-          };
-          setMessages((prev) => [...prev, fallbackMsg]);
-          if (pendingVoiceResponseRef.current) {
-            speakRef.current(accumulated);
-          }
-          pendingVoiceResponseRef.current = false;
-        }
-      } else {
-        const json = await res.json();
-        if (json.success) {
-          setMessages((prev) => [...prev, json.data]);
-          if (pendingVoiceResponseRef.current) {
-            speakRef.current(json.data.content);
-          }
-          pendingVoiceResponseRef.current = false;
-        }
-      }
+        pendingVoiceResponseRef.current = false;
+      });
     } catch (err) {
       if ((err as Error).name !== "AbortError") {
-        console.error(err);
         setStreamingContent("");
         pendingVoiceResponseRef.current = false;
         setMessages((prev) => [

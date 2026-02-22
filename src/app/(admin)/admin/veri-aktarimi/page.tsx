@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { toast } from "sonner";
 
 const SYSTEM_FIELDS = [
   { value: "fullName", label: "Ad Soyad" },
@@ -48,6 +49,7 @@ export default function DataImportPage() {
   const [step, setStep] = useState<Step>("upload");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [importing, setImporting] = useState(false);
 
   // Preview data
@@ -76,8 +78,8 @@ export default function DataImportPage() {
       const res = await fetch("/api/admin/import/logs");
       const json = await res.json();
       if (json.success) setLogs(json.data);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error("Aktarım geçmişi yüklenemedi");
     }
   }, []);
 
@@ -85,31 +87,56 @@ export default function DataImportPage() {
     fetchLogs();
   }, [fetchLogs]);
 
-  const handleUpload = async () => {
+  const handleUpload = () => {
     if (!file) return;
     setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
+    setUploadProgress(0);
 
-      const res = await fetch("/api/admin/import/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const json = await res.json();
-      if (json.success) {
-        setHeaders(json.data.headers);
-        setAutoMapping(json.data.autoMapping);
-        setColumnMapping(json.data.autoMapping);
-        setSampleRows(json.data.sampleRows);
-        setTotalRows(json.data.totalRows);
-        setHeaderRowIndex(json.data.headerRowIndex ?? 0);
-        setStep("mapping");
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        setUploadProgress(Math.round((e.loaded / e.total) * 100));
       }
-    } catch (err) {
-      console.error(err);
-    }
-    setUploading(false);
+    };
+
+    xhr.onload = () => {
+      setUploadProgress(100);
+      try {
+        const json = JSON.parse(xhr.responseText);
+        if (json.success) {
+          setHeaders(json.data.headers);
+          setAutoMapping(json.data.autoMapping);
+          setColumnMapping(json.data.autoMapping);
+          setSampleRows(json.data.sampleRows);
+          setTotalRows(json.data.totalRows);
+          setHeaderRowIndex(json.data.headerRowIndex ?? 0);
+          setStep("mapping");
+        } else {
+          toast.error("Dosya analiz edilemedi", {
+            description: "Desteklenen formatlar: .csv, .xlsx, .xls",
+          });
+        }
+      } catch {
+        toast.error("Sunucu yanıtı okunamadı");
+      }
+      setUploading(false);
+      setUploadProgress(0);
+    };
+
+    xhr.onerror = () => {
+      toast.error("Dosya analiz edilemedi", {
+        description: "Bağlantı hatası. Lütfen tekrar deneyin.",
+      });
+      setUploading(false);
+      setUploadProgress(0);
+    };
+
+    xhr.open("POST", "/api/admin/import/upload");
+    xhr.send(formData);
   };
 
   const handleImport = async () => {
@@ -131,8 +158,10 @@ export default function DataImportPage() {
         setStep("result");
         fetchLogs();
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error("Veri aktarımı başarısız", {
+        description: "Lütfen dosyayı ve eşleştirmeleri kontrol ederek tekrar deneyin.",
+      });
     }
     setImporting(false);
   };
@@ -146,6 +175,7 @@ export default function DataImportPage() {
     setSampleRows([]);
     setResult(null);
     setHeaderRowIndex(0);
+    setUploadProgress(0);
   };
 
   // Count mapped fields
@@ -185,8 +215,20 @@ export default function DataImportPage() {
               className="bg-mr-navy hover:bg-mr-navy-light"
               aria-busy={uploading}
             >
-              {uploading ? "Analiz ediliyor..." : "Dosyayı Analiz Et"}
+              {uploading ? `Yükleniyor... %${uploadProgress}` : "Dosyayı Analiz Et"}
             </Button>
+            {uploading && (
+              <div
+                className="w-full rounded-full bg-gray-100 h-2 overflow-hidden"
+                title="Yükleme ilerleme çubuğu"
+              >
+                <div
+                  className="h-2 rounded-full bg-mr-gold transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                  aria-label={`${uploadProgress}%`}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

@@ -24,6 +24,10 @@ interface UseVoiceChatReturn {
   stopSpeaking: () => void;
   isBrowserSupported: boolean;
   setSpeechRate: (rate: number) => void;
+  /** true when the browser denied microphone access */
+  micPermissionDenied: boolean;
+  /** reset micPermissionDenied back to false */
+  clearMicError: () => void;
 }
 
 // ─── Clean text for TTS ───
@@ -197,6 +201,7 @@ export function useVoiceChat({
   const [transcript, setTranscript] = useState("");
   const [isBrowserSupported, setIsBrowserSupported] = useState(false);
   const [speechRate, setSpeechRateState] = useState(initialSpeechRate);
+  const [micPermissionDenied, setMicPermissionDenied] = useState(false);
 
   // All refs — no speech API touched until user clicks voice button
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -467,6 +472,27 @@ export function useVoiceChat({
           }, 300);
           return;
         }
+        // Microphone permission denied by the user or the OS
+        if (
+          event.error === "not-allowed" ||
+          event.error === "service-not-allowed"
+        ) {
+          setMicPermissionDenied(true);
+          voiceModeRef.current = false;
+          setIsVoiceMode(false);
+          setVoiceState("idle");
+          killRecognition();
+          return;
+        }
+        // Microphone hardware not found
+        if (event.error === "audio-capture") {
+          setMicPermissionDenied(true);
+          voiceModeRef.current = false;
+          setIsVoiceMode(false);
+          setVoiceState("idle");
+          killRecognition();
+          return;
+        }
         console.error("[VoiceChat] Recognition error:", event.error);
       };
 
@@ -662,8 +688,43 @@ export function useVoiceChat({
   }, [startRecognition, clearTtsKeepAlive]);
 
   // ─── Start voice mode ───
-  const startVoiceMode = useCallback(() => {
+  const startVoiceMode = useCallback(async () => {
     if (!isBrowserSupported) return;
+
+    // Proactively request mic permission so the browser shows the native
+    // permission prompt and we can catch explicit denials BEFORE STT starts.
+    if (
+      typeof navigator !== "undefined" &&
+      navigator.mediaDevices?.getUserMedia
+    ) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+        // We only needed the permission grant — immediately release the track.
+        stream.getTracks().forEach((t) => t.stop());
+        // Clear any stale denial flag from a previous session.
+        setMicPermissionDenied(false);
+      } catch (err) {
+        const name = (err as Error).name;
+        // NotAllowedError / PermissionDeniedError = user clicked "Block"
+        // NotFoundError / DevicesNotFoundError   = no microphone hardware
+        // OverconstrainedError                   = constraints can't be met
+        if (
+          name === "NotAllowedError" ||
+          name === "PermissionDeniedError" ||
+          name === "NotFoundError" ||
+          name === "DevicesNotFoundError" ||
+          name === "OverconstrainedError"
+        ) {
+          setMicPermissionDenied(true);
+          return; // Abort — no point starting STT
+        }
+        // For any other error (e.g. AbortError, NotReadableError) fall through
+        // and let SpeechRecognition handle it.
+      }
+    }
+
     voiceModeRef.current = true;
     setIsVoiceMode(true);
     lastSentTextRef.current = "";
@@ -733,6 +794,10 @@ export function useVoiceChat({
     };
   }, []);
 
+  const clearMicError = useCallback(() => {
+    setMicPermissionDenied(false);
+  }, []);
+
   return {
     voiceState,
     isVoiceMode,
@@ -743,5 +808,7 @@ export function useVoiceChat({
     stopSpeaking,
     isBrowserSupported,
     setSpeechRate,
+    micPermissionDenied,
+    clearMicError,
   };
 }

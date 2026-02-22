@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { toast as toastNotify } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -78,7 +79,6 @@ export default function SettingsPage() {
   const [chatPrompt, setChatPrompt] = useState("");
   const [evalPrompt, setEvalPrompt] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // TTS settings state
@@ -102,11 +102,6 @@ export default function SettingsPage() {
   });
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
-
   const fetchSettings = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/settings");
@@ -123,8 +118,10 @@ export default function SettingsPage() {
           isNaN(rate) ? 1.0 : Math.max(0.5, Math.min(2.0, rate)),
         );
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toastNotify.error("Ayarlar yüklenemedi", {
+        description: "Lütfen sayfayı yenileyin.",
+      });
     }
     setLoading(false);
   }, []);
@@ -134,8 +131,8 @@ export default function SettingsPage() {
       const res = await fetch("/api/admin/users");
       const json = await res.json();
       if (json.success) setUsers(json.data);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toastNotify.error("Kullanıcı listesi yüklenemedi");
     }
   }, []);
 
@@ -156,11 +153,13 @@ export default function SettingsPage() {
       });
       const json = await res.json();
       if (json.success) {
-        showToast("AI sağlayıcı güncellendi");
+        toastNotify.success("AI sağlayıcı güncellendi");
         fetchSettings();
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toastNotify.error("AI sağlayıcı kaydedilemedi", {
+        description: "Lütfen tekrar deneyin.",
+      });
     }
     setSaving(null);
   };
@@ -175,10 +174,10 @@ export default function SettingsPage() {
       });
       const json = await res.json();
       if (json.success) {
-        showToast("Konuşma hızı kaydedildi");
+        toastNotify.success("Konuşma hızı kaydedildi");
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toastNotify.error("Konuşma hızı kaydedilemedi");
     }
     setSavingTts(false);
   };
@@ -197,13 +196,18 @@ export default function SettingsPage() {
       });
       const json = await res.json();
       if (json.success)
-        showToast(
+        toastNotify.success(
           key === "chat_system_prompt"
             ? "Chat prompt kaydedildi"
             : "Değerlendirme prompt kaydedildi",
         );
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toastNotify.error(
+        key === "chat_system_prompt"
+          ? "Chat prompt kaydedilemedi"
+          : "Değerlendirme prompt kaydedilemedi",
+        { description: "Lütfen tekrar deneyin." },
+      );
     }
     setSaving(null);
   };
@@ -222,7 +226,7 @@ export default function SettingsPage() {
       !newUser.username.trim() ||
       !newUser.password.trim()
     ) {
-      showToast("Kullanıcı adı, ad soyad ve parola zorunludur");
+      toastNotify.error("Kullanıcı adı, ad soyad ve parola zorunludur");
       return;
     }
     setSaving("create-user");
@@ -234,7 +238,7 @@ export default function SettingsPage() {
       });
       const json = await res.json();
       if (json.success) {
-        showToast("Kullanıcı oluşturuldu");
+        toastNotify.success("Kullanıcı oluşturuldu");
         setShowAddUser(false);
         setNewUser({
           fullName: "",
@@ -245,9 +249,9 @@ export default function SettingsPage() {
           permissions: { ...DEFAULT_PERMISSIONS },
         });
         fetchUsers();
-      } else showToast(json.error || "Hata oluştu");
+      } else toastNotify.error(json.error || "Hata oluştu");
     } catch {
-      showToast("Bağlantı hatası");
+      toastNotify.error("Bağlantı hatası");
     }
     setSaving(null);
   };
@@ -263,12 +267,12 @@ export default function SettingsPage() {
       });
       const json = await res.json();
       if (json.success) {
-        showToast("Yetkiler güncellendi");
+        toastNotify.success("Yetkiler güncellendi");
         setEditingUser(null);
         fetchUsers();
-      } else showToast(json.error || "Hata oluştu");
+      } else toastNotify.error(json.error || "Hata oluştu");
     } catch {
-      showToast("Bağlantı hatası");
+      toastNotify.error("Bağlantı hatası");
     }
     setSaving(null);
   };
@@ -282,7 +286,7 @@ export default function SettingsPage() {
       });
       const json = await res.json();
       if (json.success) {
-        showToast(
+        toastNotify.success(
           user.isActive
             ? "Kullanıcı devre dışı bırakıldı"
             : "Kullanıcı aktifleştirildi",
@@ -290,7 +294,7 @@ export default function SettingsPage() {
         fetchUsers();
       }
     } catch {
-      showToast("Bağlantı hatası");
+      toastNotify.error("Bağlantı hatası");
     }
   };
 
@@ -301,12 +305,12 @@ export default function SettingsPage() {
       });
       const json = await res.json();
       if (json.success) {
-        showToast("Kullanıcı silindi");
+        toastNotify.success("Kullanıcı silindi");
         setDeleteConfirm(null);
         fetchUsers();
-      } else showToast(json.error || "Hata oluştu");
+      } else toastNotify.error(json.error || "Hata oluştu");
     } catch {
-      showToast("Bağlantı hatası");
+      toastNotify.error("Bağlantı hatası");
     }
   };
 
@@ -321,16 +325,6 @@ export default function SettingsPage() {
   return (
     <div className="max-w-4xl" role="main" aria-label="Sistem ayarları">
       <h1 className="text-2xl font-heading text-mr-navy mb-6">Ayarlar</h1>
-
-      {/* Toast */}
-      {toast && (
-        <div
-          className="fixed top-4 right-4 z-50 bg-mr-navy text-white px-4 py-2 rounded-lg shadow-lg text-sm animate-in fade-in slide-in-from-top-2"
-          role="status"
-        >
-          ✓ {toast}
-        </div>
-      )}
 
       {/* ─── Tab Navigation ─── */}
       <div

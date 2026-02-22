@@ -1,10 +1,19 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 // ─── Types ───
 
@@ -165,6 +174,12 @@ export default function ScreeningPage() {
   const [batchRunning, setBatchRunning] = useState(false);
   const [expandedEval, setExpandedEval] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  // Toplu değlendirme tamamlanma takibi
+  const [pendingBatchNotify, setPendingBatchNotify] = useState(false);
+  const [showBatchEmailDialog, setShowBatchEmailDialog] = useState(false);
+  const [batchCompletedApps, setBatchCompletedApps] = useState<string[]>([]);
+  const [sendingBatchEmail, setSendingBatchEmail] = useState(false);
+  const pollAttemptsRef = useRef(0);
 
   // ─── Fetch Helpers ───
 
@@ -179,8 +194,8 @@ export default function ScreeningPage() {
       if (dJson.success && dJson.data?.departments)
         setDepartments(dJson.data.departments);
       if (fJson.success) setForms(fJson.data);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error("Meta veriler yüklenemedi");
     }
   }, []);
 
@@ -189,8 +204,8 @@ export default function ScreeningPage() {
       const res = await fetch("/api/admin/screening");
       const json = await res.json();
       if (json.success) setCriteriaList(json.data);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error("Kriterler yüklenemedi");
     }
     setLoading(false);
   }, []);
@@ -206,8 +221,8 @@ export default function ScreeningPage() {
         setEvalApps(json.data.applications);
         setEvalStats(json.data.stats);
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error("Değerlendirmeler yüklenemedi");
     }
     setEvalLoading(false);
   }, [evalFilter, evalDeptFilter]);
@@ -220,6 +235,42 @@ export default function ScreeningPage() {
   useEffect(() => {
     if (activeTab === "evaluation") fetchEvaluations();
   }, [activeTab, fetchEvaluations]);
+
+  // Toplu değlendirme tamamlanma polling'i
+  useEffect(() => {
+    if (!pendingBatchNotify) return;
+    pollAttemptsRef.current = 0;
+
+    const intervalId = setInterval(async () => {
+      pollAttemptsRef.current += 1;
+      await fetchEvaluations();
+
+      if (pollAttemptsRef.current >= 10) {
+        clearInterval(intervalId);
+        setPendingBatchNotify(false);
+        toast.warning("Değlendirmeler sürech devam ediyor", {
+          description: "Sayfayı birkaç dakika sonra yenileyin.",
+        });
+      }
+    }, 8000);
+
+    return () => clearInterval(intervalId);
+  }, [pendingBatchNotify, fetchEvaluations]);
+
+  // Pending sayısı 0'a düşünce dialog göster
+  useEffect(() => {
+    if (!pendingBatchNotify) return;
+    if (evalStats.pending !== 0) return;
+
+    setPendingBatchNotify(false);
+    const completedIds = evalApps
+      .filter((a) => a.evaluation?.status === "completed" && a.email)
+      .map((a) => a.id);
+    if (completedIds.length > 0) {
+      setBatchCompletedApps(completedIds);
+      setShowBatchEmailDialog(true);
+    }
+  }, [pendingBatchNotify, evalStats.pending, evalApps]);
 
   // ─── Criteria Form Helpers ───
 
@@ -317,8 +368,10 @@ export default function ScreeningPage() {
       });
       resetForm();
       fetchCriteria();
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error("Kriter kaydedilemedi", {
+        description: "Lütfen tekrar deneyin.",
+      });
     }
     setSaving(false);
   };
@@ -328,8 +381,8 @@ export default function ScreeningPage() {
     try {
       await fetch(`/api/admin/screening/${id}`, { method: "DELETE" });
       fetchCriteria();
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error("Kriter silinemedi");
     }
   };
 
@@ -341,8 +394,8 @@ export default function ScreeningPage() {
         body: JSON.stringify({ isActive: !isActive }),
       });
       fetchCriteria();
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error("Kriter durumu güncellenemedi");
     }
   };
 
@@ -362,15 +415,21 @@ export default function ScreeningPage() {
       });
       const json = await res.json();
       if (json.success) {
-        alert(
-          `${json.data.queued} başvuru değerlendirmeye alındı. Sonuçlar birkaç dakika içinde hazır olacak.`,
+        const queued: number = json.data.queued ?? 0;
+        toast.success(
+          `${queued} başvuru değerlendirmeye alındı. Sonuçlar birkaç dakika içinde hazır olacak.`,
+          { duration: 7000 },
         );
-        // Poll for results after a delay
-        setTimeout(() => fetchEvaluations(), 5000);
+        if (queued > 0) {
+          setPendingBatchNotify(true);
+        } else {
+          setTimeout(() => fetchEvaluations(), 5000);
+        }
       }
-    } catch (err) {
-      console.error(err);
-      alert("Toplu değerlendirme başlatılamadı.");
+    } catch {
+      toast.error("Toplu değerlendirme başlatılamadı", {
+        description: "Lütfen tekrar deneyin.",
+      });
     }
     setBatchRunning(false);
   };
@@ -380,8 +439,8 @@ export default function ScreeningPage() {
     try {
       await fetch(`/api/admin/evaluations/${appId}/retry`, { method: "POST" });
       setTimeout(() => fetchEvaluations(), 3000);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error("Değerlendirme yeniden başlatılamadı");
     }
     setRetryingId(null);
   };
@@ -395,8 +454,8 @@ export default function ScreeningPage() {
         body: JSON.stringify({ applicationIds: [appId] }),
       });
       setTimeout(() => fetchEvaluations(), 3000);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error("Değerlendirme başlatılamadı");
     }
     setRetryingId(null);
   };
@@ -1183,6 +1242,64 @@ export default function ScreeningPage() {
           )}
         </div>
       )}
+
+      {/* Toplu Değerlendirme E-posta Bildirim Dialogu */}
+      <Dialog
+        open={showBatchEmailDialog}
+        onOpenChange={(open) => { if (!open) setShowBatchEmailDialog(false); }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Toplu E-posta Bildirimi</DialogTitle>
+            <DialogDescription>
+              Tüm değerlendirmeler tamamlandı.{" "}
+              <strong>{batchCompletedApps.length}</strong> adaya{" "}
+              &ldquo;Başvurunuz Değerlendirildi&rdquo; e-postası gönderilsin mi?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowBatchEmailDialog(false)}
+              disabled={sendingBatchEmail}
+            >
+              Geç
+            </Button>
+            <Button
+              disabled={sendingBatchEmail}
+              className="bg-mr-navy hover:bg-mr-navy/90"
+              onClick={async () => {
+                setSendingBatchEmail(true);
+                try {
+                  const res = await fetch("/api/admin/evaluations/batch-notify", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ applicationIds: batchCompletedApps }),
+                  });
+                  const json = await res.json();
+                  if (json.success) {
+                    toast.success(
+                      `${json.sent} adaya e-posta gönderildi${json.failed > 0 ? `, ${json.failed} gönderilemedi` : ""
+                      }`,
+                    );
+                  } else {
+                    toast.error("E-postalar gönderilemedi");
+                  }
+                } catch {
+                  toast.error("Bağlantı hatası");
+                } finally {
+                  setSendingBatchEmail(false);
+                  setShowBatchEmailDialog(false);
+                }
+              }}
+            >
+              {sendingBatchEmail
+                ? "Gönderiliyor..."
+                : `${batchCompletedApps.length} Adaya Gönder`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
