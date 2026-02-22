@@ -26,8 +26,15 @@ RUN apk add --no-cache \
   git \
   postgresql16-dev \
   && git clone --depth 1 --branch v0.8.0 https://github.com/pgvector/pgvector.git /tmp/pgvector \
-  && PG_CONFIG_BIN="$(command -v pg_config)" \
+  && PG_CONFIG_BIN="" \
+  && for c in /usr/bin/pg_config16 /usr/lib/postgresql16/bin/pg_config /usr/bin/pg_config $(find /usr -type f -name pg_config 2>/dev/null); do \
+       if [ -x "$c" ] && "$c" --version 2>/dev/null | grep -q "PostgreSQL 16" && [ -f "$("$c" --pgxs 2>/dev/null)" ]; then \
+         PG_CONFIG_BIN="$c"; \
+         break; \
+       fi; \
+     done \
   && test -n "$PG_CONFIG_BIN" \
+  && echo "Using PG_CONFIG: $PG_CONFIG_BIN" \
   && make -C /tmp/pgvector PG_CONFIG="$PG_CONFIG_BIN" \
   && make -C /tmp/pgvector PG_CONFIG="$PG_CONFIG_BIN" install \
   && apk del .build-deps \

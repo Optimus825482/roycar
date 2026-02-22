@@ -63,7 +63,7 @@ for migration_dir in prisma/migrations/*/; do
     if [ "$APPLIED" != "1" ]; then
       echo "  Applying migration: $migration_name"
       if su postgres -c "psql -v ON_ERROR_STOP=1 -d $DB_NAME -f $migration_sql"; then
-        su postgres -c "psql -v ON_ERROR_STOP=1 -d $DB_NAME -c \"INSERT INTO _prisma_migrations (id, checksum, migration_name, finished_at, applied_steps_count) VALUES (gen_random_uuid()::text, 'manual', '$migration_name', NOW(), 1) ON CONFLICT DO NOTHING;\""
+        su postgres -c "psql -v ON_ERROR_STOP=1 -d $DB_NAME -c \"INSERT INTO _prisma_migrations (id, checksum, migration_name, finished_at, applied_steps_count) VALUES (md5('$migration_name' || clock_timestamp()::text || random()::text), 'manual', '$migration_name', NOW(), 1) ON CONFLICT DO NOTHING;\""
       else
         echo "  ERROR: migration failed: $migration_name"
         exit 1
