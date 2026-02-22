@@ -24,7 +24,7 @@ RUN apk add --no-cache \
     && mkdir -p /var/lib/postgresql/data \
     && mkdir -p /run/postgresql \
     && mkdir -p /var/log/supervisor \
-    && chown -R postgres:postgres /var/lib/postgresql /run/postgresql
+    && chown -R postgres:postgres /var/lib/postgresql /run/postgresql /var/log/supervisor
 
 WORKDIR /app
 
@@ -57,7 +57,7 @@ ENV DB_PASSWORD=postgres
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=5 \
   CMD curl -f http://localhost:3000/ || exit 1
 
 ENTRYPOINT ["/docker-entrypoint.sh"]

@@ -8,15 +8,21 @@ if [ ! -f "$PGDATA/PG_VERSION" ]; then
   echo ">>> Initializing PostgreSQL database..."
   su postgres -c "initdb -D $PGDATA --encoding=UTF8 --locale=C"
 
-  # Allow local connections
-  echo "host all all 0.0.0.0/0 md5" >> "$PGDATA/pg_hba.conf"
-  echo "local all all trust" >> "$PGDATA/pg_hba.conf"
+  # Allow local and password-based connections
+  cat > "$PGDATA/pg_hba.conf" <<EOF
+# TYPE  DATABASE  USER  ADDRESS       METHOD
+local   all       all                 trust
+host    all       all   127.0.0.1/32  md5
+host    all       all   0.0.0.0/0     md5
+EOF
+
+  # Listen only on localhost
   sed -i "s/#listen_addresses = 'localhost'/listen_addresses = 'localhost'/" "$PGDATA/postgresql.conf"
 fi
 
 # ─── 2. Start PostgreSQL temporarily for migrations ───
 echo ">>> Starting PostgreSQL for migrations..."
-su postgres -c "pg_ctl -D $PGDATA -l /var/log/supervisor/postgresql.log start -w -t 30"
+su postgres -c "pg_ctl -D $PGDATA -l /var/log/supervisor/postgresql.log start -w -t 60"
 
 # ─── 3. Create database and user if not exists ───
 su postgres -c "psql -tc \"SELECT 1 FROM pg_database WHERE datname='$DB_NAME'\" | grep -q 1" || \
@@ -33,7 +39,7 @@ echo "DATABASE_URL=\"$DATABASE_URL\"" > /app/.env.local
 
 # ─── 5. Run Prisma migrations ───
 echo ">>> Running Prisma migrations..."
-npx prisma migrate deploy 2>/dev/null || echo "Migration warning (may already be applied)"
+npx prisma migrate deploy 2>&1 || echo "Migration warning (may already be applied)"
 
 # ─── 6. Run seed if tables are empty ───
 DEPT_COUNT=$(su postgres -c "psql -t -d $DB_NAME -c \"SELECT COUNT(*) FROM departments;\"" 2>/dev/null | tr -d ' ' || echo "0")
