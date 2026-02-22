@@ -36,22 +36,8 @@ export const metadata: Metadata = {
     description: "Merit Royal Hotels — Kariyer ve başvuru platformu",
     url: "https://royalcareer.erkanerdem.net",
     siteName: "Merit Royal Kariyer",
-    images: [
-      {
-        url: "/images/logo.png",
-        width: 512,
-        height: 512,
-        alt: "Merit Royal Hotels Logo",
-      },
-    ],
     locale: "tr_TR",
     type: "website",
-  },
-  twitter: {
-    card: "summary",
-    title: "Merit Royal Kariyer",
-    description: "Merit Royal Hotels — Kariyer ve başvuru platformu",
-    images: ["/images/logo.png"],
   },
 };
 
