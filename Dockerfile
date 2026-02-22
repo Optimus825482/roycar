@@ -35,6 +35,20 @@ COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=build /app/node_modules/prisma ./node_modules/prisma
 COPY --from=build /app/node_modules/dotenv ./node_modules/dotenv
 
+# pg driver + sub-dependencies (required by @prisma/adapter-pg)
+COPY --from=build /app/node_modules/pg ./node_modules/pg
+COPY --from=build /app/node_modules/pg-pool ./node_modules/pg-pool
+COPY --from=build /app/node_modules/pg-protocol ./node_modules/pg-protocol
+COPY --from=build /app/node_modules/pg-types ./node_modules/pg-types
+COPY --from=build /app/node_modules/pg-connection-string ./node_modules/pg-connection-string
+COPY --from=build /app/node_modules/pgpass ./node_modules/pgpass
+COPY --from=build /app/node_modules/postgres-array ./node_modules/postgres-array
+COPY --from=build /app/node_modules/pg-int8 ./node_modules/pg-int8
+COPY --from=build /app/node_modules/postgres-bytea ./node_modules/postgres-bytea
+COPY --from=build /app/node_modules/postgres-date ./node_modules/postgres-date
+COPY --from=build /app/node_modules/postgres-interval ./node_modules/postgres-interval
+COPY --from=build /app/node_modules/split2 ./node_modules/split2
+
 # Copy entrypoint and supervisor config
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh

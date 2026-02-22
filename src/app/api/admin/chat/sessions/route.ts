@@ -22,7 +22,8 @@ export async function GET(req: NextRequest) {
     return Response.json({ success: true, data: serialized });
   } catch (err) {
     console.error("Chat sessions error:", err);
-    return apiError("Oturumlar alınamadı.", 500);
+    const message = err instanceof Error ? err.message : "Bilinmeyen hata";
+    return apiError(`Oturumlar alınamadı: ${message}`, 500);
   }
 }
 
@@ -45,6 +46,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ success: true, data: serialized }, { status: 201 });
   } catch (err) {
     console.error("Chat session create error:", err);
-    return apiError("Oturum oluşturulamadı.", 500);
+    const message = err instanceof Error ? err.message : "Bilinmeyen hata";
+    return apiError(`Oturum oluşturulamadı: ${message}`, 500);
   }
 }
