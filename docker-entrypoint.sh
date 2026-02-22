@@ -39,7 +39,37 @@ echo "DATABASE_URL=\"$DATABASE_URL\"" > /app/.env.local
 
 # ─── 5. Run Prisma migrations ───
 echo ">>> Running Prisma migrations..."
-node node_modules/prisma/build/index.js migrate deploy 2>&1 || echo "Migration warning (may already be applied)"
+# Ensure _prisma_migrations table exists
+su postgres -c "psql -d $DB_NAME -c \"
+  CREATE TABLE IF NOT EXISTS _prisma_migrations (
+    id VARCHAR(36) PRIMARY KEY,
+    checksum VARCHAR(64) NOT NULL,
+    finished_at TIMESTAMPTZ,
+    migration_name VARCHAR(255) NOT NULL UNIQUE,
+    logs TEXT,
+    rolled_back_at TIMESTAMPTZ,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    applied_steps_count INTEGER NOT NULL DEFAULT 0
+  );
+\"" 2>/dev/null || true
+
+# Apply migration SQL files directly (Prisma CLI has too many deps for standalone)
+for migration_dir in prisma/migrations/*/; do
+  migration_sql="${migration_dir}migration.sql"
+  if [ -f "$migration_sql" ]; then
+    migration_name=$(basename "$migration_dir")
+    # Check if migration already applied
+    APPLIED=$(su postgres -c "psql -t -d $DB_NAME -c \"SELECT 1 FROM _prisma_migrations WHERE migration_name='$migration_name' AND finished_at IS NOT NULL;\"" 2>/dev/null | tr -d ' ' || echo "")
+    if [ "$APPLIED" != "1" ]; then
+      echo "  Applying migration: $migration_name"
+      su postgres -c "psql -d $DB_NAME -f $migration_sql" 2>&1 || echo "  Warning: migration $migration_name may have issues"
+      # Record in _prisma_migrations table
+      su postgres -c "psql -d $DB_NAME -c \"INSERT INTO _prisma_migrations (id, checksum, migration_name, finished_at, applied_steps_count) VALUES (gen_random_uuid()::text, 'manual', '$migration_name', NOW(), 1) ON CONFLICT DO NOTHING;\"" 2>/dev/null || true
+    else
+      echo "  Already applied: $migration_name"
+    fi
+  fi
+done
 
 # ─── 6. Run seed if tables are empty ───
 DEPT_COUNT=$(su postgres -c "psql -t -d $DB_NAME -c \"SELECT COUNT(*) FROM departments;\"" 2>/dev/null | tr -d ' ' || echo "0")
