@@ -62,9 +62,12 @@ for migration_dir in prisma/migrations/*/; do
     APPLIED=$(su postgres -c "psql -t -d $DB_NAME -c \"SELECT 1 FROM _prisma_migrations WHERE migration_name='$migration_name' AND finished_at IS NOT NULL;\"" 2>/dev/null | tr -d ' ' || echo "")
     if [ "$APPLIED" != "1" ]; then
       echo "  Applying migration: $migration_name"
-      su postgres -c "psql -d $DB_NAME -f $migration_sql" 2>&1 || echo "  Warning: migration $migration_name may have issues"
-      # Record in _prisma_migrations table
-      su postgres -c "psql -d $DB_NAME -c \"INSERT INTO _prisma_migrations (id, checksum, migration_name, finished_at, applied_steps_count) VALUES (gen_random_uuid()::text, 'manual', '$migration_name', NOW(), 1) ON CONFLICT DO NOTHING;\"" 2>/dev/null || true
+      if su postgres -c "psql -v ON_ERROR_STOP=1 -d $DB_NAME -f $migration_sql"; then
+        su postgres -c "psql -v ON_ERROR_STOP=1 -d $DB_NAME -c \"INSERT INTO _prisma_migrations (id, checksum, migration_name, finished_at, applied_steps_count) VALUES (gen_random_uuid()::text, 'manual', '$migration_name', NOW(), 1) ON CONFLICT DO NOTHING;\""
+      else
+        echo "  ERROR: migration failed: $migration_name"
+        exit 1
+      fi
     else
       echo "  Already applied: $migration_name"
     fi

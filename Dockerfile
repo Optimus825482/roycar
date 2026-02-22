@@ -19,6 +19,7 @@ FROM node:20-alpine AS production
 RUN apk add --no-cache \
     postgresql16 \
     postgresql16-contrib \
+  postgresql16-pgvector \
     supervisor \
     curl \
     && mkdir -p /var/lib/postgresql/data \
