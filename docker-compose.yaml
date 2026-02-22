@@ -4,6 +4,8 @@ services:
   db:
     image: pgvector/pgvector:pg16
     container_name: merit-royal-db
+    ports:
+      - "15432:5432"
     environment:
       POSTGRES_DB: royal_careerdb
       POSTGRES_USER: postgres

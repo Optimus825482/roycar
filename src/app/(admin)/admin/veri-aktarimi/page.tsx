@@ -84,7 +84,8 @@ export default function DataImportPage() {
   }, []);
 
   useEffect(() => {
-    fetchLogs();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
+    void fetchLogs();
   }, [fetchLogs]);
 
   const handleUpload = () => {
@@ -279,7 +280,7 @@ export default function DataImportPage() {
                         setColumnMapping((prev) => ({ ...prev, [h]: v }))
                       }
                     >
-                      <SelectTrigger className="w-[160px]">
+                      <SelectTrigger className="w-40">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -329,7 +330,7 @@ export default function DataImportPage() {
                         {headers.map((h) => (
                           <TableCell
                             key={h}
-                            className="text-xs max-w-[200px] truncate"
+                            className="text-xs max-w-50 truncate"
                           >
                             {String(row[h] ?? "")}
                           </TableCell>

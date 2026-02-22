@@ -219,7 +219,7 @@ export default function ApplicationDetailPage() {
           disabled={statusUpdating}
         >
           <SelectTrigger
-            className="w-[160px]"
+            className="w-40"
             aria-label="Başvuru durumunu değiştir"
           >
             <SelectValue />

@@ -413,11 +413,13 @@ export default function ChatPage() {
   }, [createSession]);
 
   useEffect(() => {
-    fetchSessions(showArchived);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
+    void fetchSessions(showArchived);
   }, [fetchSessions, showArchived]);
 
   useEffect(() => {
-    if (activeSessionId) fetchMessages(activeSessionId);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
+    if (activeSessionId) void fetchMessages(activeSessionId);
   }, [activeSessionId, fetchMessages]);
 
   useEffect(() => {
@@ -964,7 +966,7 @@ export default function ChatPage() {
                   ? "Sesli sohbet aktif — konuşun..."
                   : "Mesajınızı yazın..."
               }
-              className="resize-none min-h-[40px] max-h-[120px]"
+              className="resize-none min-h-10 max-h-30"
               rows={1}
               disabled={sending || (isVoiceMode && voiceState === "listening")}
               aria-label="Mesaj giriş alanı"
@@ -1099,13 +1101,13 @@ export default function ChatPage() {
           aria-label="Sohbet listesi"
         >
           {loadingSessions ? (
-            <p className="text-sm text-mr-text-muted p-2" aria-live="polite">
+            <div role="listitem" className="text-sm text-mr-text-muted p-2" aria-live="polite">
               Yükleniyor...
-            </p>
+            </div>
           ) : sessions.length === 0 ? (
-            <p className="text-sm text-mr-text-muted p-2">
+              <div role="listitem" className="text-sm text-mr-text-muted p-2">
               {showArchived ? "Arşivde sohbet yok." : "Henüz sohbet yok."}
-            </p>
+              </div>
           ) : (
             sessions.map((s) => (
               <div
@@ -1130,6 +1132,7 @@ export default function ChatPage() {
                         checked={selectedIds.has(s.id)}
                         onChange={() => toggleSelect(s.id)}
                         className="rounded border-gray-300 text-mr-gold focus:ring-mr-gold/50 w-3.5 h-3.5"
+                        aria-label="Sohbet seç"
                       />
                     </label>
                   )}

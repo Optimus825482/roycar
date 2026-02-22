@@ -566,6 +566,7 @@ export default function ScreeningPage() {
                   className="border rounded-md px-3 py-2 text-sm"
                   value={evalDeptFilter}
                   onChange={(e) => setEvalDeptFilter(e.target.value)}
+                  aria-label="Departman filtresi"
                 >
                   <option value="">Tüm Departmanlar</option>
                   {departments.map((d) => (
@@ -579,6 +580,7 @@ export default function ScreeningPage() {
                   className="border rounded-md px-3 py-2 text-sm"
                   value={evalFilter}
                   onChange={(e) => setEvalFilter(e.target.value)}
+                  aria-label="Değerlendirme durumu filtresi"
                 >
                   <option value="all">Tümü</option>
                   <option value="pending">Değerlendirilmemiş</option>
@@ -948,6 +950,7 @@ export default function ScreeningPage() {
                           departmentId: e.target.value,
                         }))
                       }
+                      aria-label="Departman seçimi"
                     >
                       <option value="">Tüm Departmanlar</option>
                       {departments.map((d) => (
@@ -970,6 +973,7 @@ export default function ScreeningPage() {
                           formConfigId: e.target.value,
                         }))
                       }
+                      aria-label="Form seçimi"
                     >
                       <option value="">Tüm Formlar</option>
                       {forms.map((f) => (
@@ -1009,6 +1013,7 @@ export default function ScreeningPage() {
                               onChange={(e) =>
                                 updateRule(idx, "questionId", e.target.value)
                               }
+                              aria-label="Soru seçimi"
                             >
                               <option value="">Soru seçin</option>
                               {selectedFormQuestions.map((q) => (
@@ -1023,6 +1028,7 @@ export default function ScreeningPage() {
                               onChange={(e) =>
                                 updateRule(idx, "operator", e.target.value)
                               }
+                              aria-label="Operatör seçimi"
                             >
                               {OPERATORS.map((op) => (
                                 <option key={op.value} value={op.value}>

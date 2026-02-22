@@ -137,8 +137,9 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    fetchSettings();
-    fetchUsers();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
+    void fetchSettings();
+    void fetchUsers();
   }, [fetchSettings, fetchUsers]);
 
   // ─── Handlers ───
@@ -383,7 +384,7 @@ export default function SettingsPage() {
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          p.configured && setSelectedProvider(p.key);
+                          if (p.configured) setSelectedProvider(p.key);
                         }
                       }}
                       role="radio"
@@ -398,7 +399,7 @@ export default function SettingsPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div
-                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? "border-mr-gold bg-mr-gold" : "border-gray-300"}`}
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? "border-mr-gold bg-mr-gold" : "border-gray-300"}`}
                         >
                           {isSelected && (
                             <div className="w-2 h-2 rounded-full bg-white" />
@@ -416,7 +417,7 @@ export default function SettingsPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-2 shrink-0">
                         {isActive && (
                           <Badge className="bg-mr-gold/20 text-mr-gold border-mr-gold/30 text-xs">
                             Aktif
@@ -777,6 +778,7 @@ export default function SettingsPage() {
                         onChange={(e) =>
                           setNewUser({ ...newUser, role: e.target.value })
                         }
+                        aria-label="Kullanıcı rolü seçin"
                         className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-mr-gold focus:ring-1 focus:ring-mr-gold/20 focus:outline-none"
                       >
                         <option value="hr_manager">İK Yöneticisi</option>
@@ -886,7 +888,7 @@ export default function SettingsPage() {
                         })}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 ml-3 flex-shrink-0">
+                    <div className="flex items-center gap-1 ml-3 shrink-0">
                       <Button
                         variant="ghost"
                         size="sm"
