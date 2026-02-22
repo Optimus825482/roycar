@@ -13,20 +13,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) {
-          console.error("[AUTH DEBUG] Missing credentials", { hasUsername: !!credentials?.username, hasPassword: !!credentials?.password });
           throw new Error("Kullanıcı adı ve parola gereklidir.");
         }
-
-        console.log("[AUTH DEBUG] Login attempt for:", credentials.username);
 
         const user = await prisma.adminUser.findUnique({
           where: { username: credentials.username as string },
         });
 
-        console.log("[AUTH DEBUG] User found:", !!user, user ? { id: user.id, username: user.username, isActive: user.isActive, hashLength: user.passwordHash?.length } : 'null');
-
         if (!user || !user.isActive) {
-          console.error("[AUTH DEBUG] User not found or inactive");
           throw new Error("Geçersiz kimlik bilgileri.");
         }
 
@@ -35,10 +29,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           user.passwordHash,
         );
 
-        console.log("[AUTH DEBUG] Password compare result:", isValid);
-
         if (!isValid) {
-          console.error("[AUTH DEBUG] Password mismatch for user:", user.username);
           throw new Error("Geçersiz kimlik bilgileri.");
         }
 

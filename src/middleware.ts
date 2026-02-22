@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 
 // Simple in-memory rate limiter for apply endpoint
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -21,7 +20,7 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
-export async function middleware(req: NextRequest) {
+export default auth((req) => {
   const { pathname } = req.nextUrl;
 
   // Rate limiting for apply endpoint
@@ -41,12 +40,7 @@ export async function middleware(req: NextRequest) {
 
   // Protect admin pages
   if (pathname.startsWith("/admin")) {
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
-    });
-
-    if (!token) {
+    if (!req.auth) {
       const loginUrl = new URL("/giris", req.url);
       loginUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(loginUrl);
@@ -55,12 +49,7 @@ export async function middleware(req: NextRequest) {
 
   // Protect admin API routes
   if (pathname.startsWith("/api/admin")) {
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
-    });
-
-    if (!token) {
+    if (!req.auth) {
       return NextResponse.json(
         { success: false, error: "Yetkisiz erişim." },
         { status: 401 },
@@ -69,7 +58,7 @@ export async function middleware(req: NextRequest) {
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: ["/admin/:path*", "/api/admin/:path*", "/api/apply"],
