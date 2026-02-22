@@ -5,32 +5,32 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
 // Sütun eşleştirme haritası (CSV/XLSX sütun adları → sistem alanları)
+// Tüm key'ler ASCII-normalized (Türkçe karakterler dönüştürülmüş)
+// SADECE tam eşleşme (exact match) ile kullanılır — false positive'leri önler
 const COLUMN_MAP: Record<string, string> = {
-  // Türkçe sütun adları
+  // Türkçe sütun adları (tümü ASCII-normalized)
   "ad soyad": "fullName",
   "adiniz soyadiniz": "fullName",
   adsoyad: "fullName",
-  ad: "fullName",
   isim: "fullName",
   "tam ad": "fullName",
-  "e-posta": "email",
+  "ad soyadi": "fullName",
+  "adi soyadi": "fullName",
   "e posta": "email",
   eposta: "email",
   email: "email",
   mail: "email",
   telefon: "phone",
   "telefon numaraniz": "phone",
-  tel: "phone",
   "cep telefonu": "phone",
+  "cep telefon": "phone",
+  "telefon no": "phone",
   departman: "department",
   "basvurdugunuz departman": "department",
-  "basvurdugunuz departman/ pozisyon": "department",
   "basvurdugunuz departman pozisyon": "department",
-  bölüm: "department",
   pozisyon: "department",
   "basvuru tarihi": "submittedAt",
   "zaman damgasi": "submittedAt",
-  tarih: "submittedAt",
   durum: "status",
   // İngilizce
   "full name": "fullName",
@@ -40,6 +40,45 @@ const COLUMN_MAP: Record<string, string> = {
   date: "submittedAt",
   status: "status",
 };
+
+// Kelime düzeyinde kısmi eşleştirme kuralları (partial match — 2. aşama)
+// Tüm kelimeler ASCII-normalized olmalı
+const PARTIAL_MATCH_RULES: {
+  words: string[];
+  field: string;
+  exclude?: string[];
+}[] = [
+  {
+    words: ["telefon"],
+    field: "phone",
+    exclude: ["acil"],
+  },
+  {
+    words: ["departman"],
+    field: "department",
+    exclude: ["okul", "universite", "okudug", "bolum"],
+  },
+  {
+    words: ["e", "posta"],
+    field: "email",
+    exclude: [],
+  },
+  {
+    words: ["email"],
+    field: "email",
+    exclude: [],
+  },
+  {
+    words: ["basvuru", "tarih"],
+    field: "submittedAt",
+    exclude: ["dogum"],
+  },
+  {
+    words: ["zaman", "damga"],
+    field: "submittedAt",
+    exclude: [],
+  },
+];
 
 // Header olma olasılığını belirleyen anahtar kelimeler
 const HEADER_KEYWORDS = [
@@ -84,30 +123,67 @@ function normalizeColumnName(col: string): string {
   return col
     .toLowerCase()
     .trim()
-    .replace(/[_\-\.]/g, " ")
-    .replace(/[^\w\sğüşıöçĞÜŞİÖÇ]/g, " ")
+    .replace(/[_\-\.\/]/g, " ")    // Separators → space (includes /)
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ı/g, "i")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c")
+    .replace(/İ/gi, "i")              // Turkish İ (may survive toLowerCase)
+    .replace(/[^\w\s]/g, " ")        // Strip all non-word non-space
     .replace(/\s+/g, " ")
     .trim();
 }
 
 export function autoMapColumns(headers: string[]): Record<string, string> {
   const mapping: Record<string, string> = {};
+  const usedFields = new Set<string>();
+
+  // ─── Aşama 1: Tam eşleştirme (exact match — en güvenilir) ───
   for (const header of headers) {
     const normalized = normalizeColumnName(header);
-    // Direct match
-    if (COLUMN_MAP[normalized]) {
-      mapping[header] = COLUMN_MAP[normalized];
-      continue;
+    const field = COLUMN_MAP[normalized];
+    if (field && !usedFields.has(field)) {
+      mapping[header] = field;
+      usedFields.add(field);
     }
-    // Partial match — check if any known key is contained in the header
-    for (const [knownKey, sysField] of Object.entries(COLUMN_MAP)) {
-      if (normalized.includes(knownKey) || knownKey.includes(normalized)) {
-        if (!mapping[header]) {
-          mapping[header] = sysField;
-        }
+  }
+
+  // ─── Aşama 2: Kelime düzeyinde kısmi eşleştirme (partial match) ───
+  // Sadece Aşama 1'de eşleşmemiş header'lar ve henüz kullanılmamış alanlar için
+  for (const header of headers) {
+    if (mapping[header]) continue; // Zaten eşleşti
+    const normalized = normalizeColumnName(header);
+    const headerWords = normalized.split(/\s+/);
+
+    for (const rule of PARTIAL_MATCH_RULES) {
+      if (usedFields.has(rule.field)) continue; // Bu alan zaten kullanıldı
+
+      // Exclude kelimelerinden biri varsa atla
+      if (
+        rule.exclude?.some((exc) =>
+          headerWords.some((hw) => hw.includes(exc)),
+        )
+      ) {
+        continue;
+      }
+
+      // Tüm "words" kelimelerinin header'da tam kelime olarak bulunması gerekir
+      const allWordsMatch = rule.words.every((ruleWord) =>
+        headerWords.some(
+          (hw) => hw === ruleWord || hw.startsWith(ruleWord + "n"),
+        ),
+      );
+
+      if (allWordsMatch) {
+        mapping[header] = rule.field;
+        usedFields.add(rule.field);
+        break;
       }
     }
   }
+
   return mapping;
 }
 
