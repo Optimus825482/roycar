@@ -23,7 +23,7 @@ export default async function HomePage() {
     <div className="relative flex min-h-screen flex-col items-center justify-center bg-mr-navy px-4">
       <MeritRoyalLogo width={240} height={80} />
 
-      <p className="mt-4 font-body text-white/60 text-center text-2xl sm:text-3xl tracking-wide">
+      <p className="mt-4 font-body text-white/60 text-center text-2xl sm:text-xl tracking-wide">
         En İyilerle Birlikte,<br /> Daha İyisi İçin.
       </p>
       <p className="mt-2 font-(family-name:--font-handwriting) text-mr-gold text-5xl sm:text-6xl text-center">
