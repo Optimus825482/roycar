@@ -65,9 +65,11 @@ function LoginForm() {
               priority
             />
           </div>
-          <h1 className="text-2xl text-mr-navy">Yönetim Paneli</h1>
-          <p className="text-mr-text-secondary text-sm mt-1">
-            İK Başvuru Değerlendirme Sistemi
+          <p className="text-mr-text-secondary text-sm tracking-wide">
+            Sektörün En İyileriyle, En İyisi İçin.
+          </p>
+          <p className="font-(family-name:--font-handwriting) text-mr-gold text-2xl mt-1">
+            Hoşgeldiniz
           </p>
         </CardHeader>
         <CardContent>
@@ -111,6 +113,11 @@ function LoginForm() {
           </form>
         </CardContent>
       </Card>
+
+      <footer className="mt-8 text-center text-mr-text-muted/50 text-xs space-y-1">
+        <p>© {new Date().getFullYear()} Merit Royal Hotels — Tüm hakları saklıdır.</p>
+
+      </footer>
     </div>
   );
 }

@@ -20,11 +20,14 @@ export default async function HomePage() {
   const activeForm = await getActiveForm();
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-mr-navy px-4">
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-mr-navy px-4">
       <MeritRoyalLogo width={240} height={80} />
 
-      <p className="mt-2 font-body text-white/50 text-center text-sm tracking-wide">
-        Mükemmelliğin gücü, doğru insanlarla başlar.
+      <p className="mt-4 font-body text-white/60 text-center text-2xl sm:text-3xl tracking-wide">
+        En İyilerle Birlikte,<br /> Daha İyisi İçin.
+      </p>
+      <p className="mt-2 font-(family-name:--font-handwriting) text-mr-gold text-5xl sm:text-6xl text-center">
+        Hoşgeldiniz
       </p>
 
       {activeForm ? (
@@ -60,14 +63,18 @@ export default async function HomePage() {
         </div>
       )}
 
-      <div className="mt-16 text-center">
+      <footer className="absolute bottom-6 left-0 right-0 text-center space-y-2">
+        <p className="text-white/25 text-xs tracking-wide">
+          © {new Date().getFullYear()} Merit Royal Hotels — Tüm hakları saklıdır.
+        </p>
+
         <Link
           href="/giris"
-          className="text-white/20 text-xs hover:text-white/50 transition-colors"
+          className="inline-block text-white/15 text-[10px] hover:text-white/40 transition-colors mt-1"
         >
           Yönetim
         </Link>
-      </div>
+      </footer>
     </div>
   );
 }

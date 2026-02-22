@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Inter } from "next/font/google";
+import { Playfair_Display, Inter, Dancing_Script } from "next/font/google";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -16,10 +16,17 @@ const inter = Inter({
   display: "swap",
 });
 
+const dancingScript = Dancing_Script({
+  variable: "--font-handwriting",
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Merit Royal Kariyer",
   description: "Merit Royal Hotels — Kariyer ve başvuru platformu",
-  icons: { icon: "/images/logo.png" },
+  icons: { icon: "/images/image.ico" },
 };
 
 export default function RootLayout({
@@ -29,7 +36,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr">
-      <body className={`${playfair.variable} ${inter.variable} antialiased`}>
+      <body className={`${playfair.variable} ${inter.variable} ${dancingScript.variable} antialiased`}>
         {children}
       </body>
     </html>
