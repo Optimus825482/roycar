@@ -66,7 +66,7 @@ function LoginForm() {
             />
           </div>
           <p className="text-mr-text-secondary text-sm tracking-wide">
-            Sektörün En İyileriyle, En İyisi İçin.
+            En İyilerle Birlikte, Daha İyisi İçin.
           </p>
           <p className="font-(family-name:--font-handwriting) text-mr-gold text-2xl mt-1">
             Hoşgeldiniz

@@ -41,7 +41,7 @@ export default function ApplicationPage() {
               Hoşgeldiniz
             </DialogTitle>
             <DialogDescription className="text-mr-text-secondary text-xs tracking-widest uppercase mt-1">
-              Sektörün En İyileriyle, En İyisi İçin.
+              En İyilerle Birlikte, Daha İyisi İçin.
             </DialogDescription>
           </DialogHeader>
 
@@ -70,7 +70,7 @@ export default function ApplicationPage() {
       {/* Sayfa İçeriği */}
       <div className="text-center mb-8">
         <p className="text-mr-text-secondary text-sm tracking-wide">
-          Sektörün En İyileriyle, En İyisi İçin.
+          En İyilerle Birlikte, Daha İyisi İçin.
         </p>
         <p className="font-(family-name:--font-handwriting) text-mr-gold text-2xl mt-1">
           Hoşgeldiniz

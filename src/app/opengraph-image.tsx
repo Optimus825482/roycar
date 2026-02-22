@@ -62,7 +62,7 @@ export default function OGImage() {
                         opacity: 0.8,
                     }}
                 >
-                    Sektörün En İyileriyle, En İyisi İçin.
+                    En İyilerle Birlikte, Daha İyisi İçin.
                 </div>
             </div>
         ),
