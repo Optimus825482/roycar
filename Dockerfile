@@ -12,37 +12,13 @@ COPY . .
 RUN echo 'DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"' > .env.local
 RUN npx prisma generate && npm run build
 
-# ─── Stage 3: Production (Node + PostgreSQL in same container) ───
+# ─── Stage 3: Production (App only) ───
 FROM node:20-alpine AS production
 
-# Install PostgreSQL and supervisor, then build pgvector from source
+# Install only runtime tools needed by app entrypoint (db readiness + SQL migration execution)
 RUN apk add --no-cache \
-  postgresql16 \
-  postgresql16-contrib \
-  supervisor \
-  curl \
-  && apk add --no-cache --virtual .build-deps \
-  build-base \
-  git \
-  postgresql16-dev \
-  && git clone --depth 1 --branch v0.8.0 https://github.com/pgvector/pgvector.git /tmp/pgvector \
-  && PG_CONFIG_BIN="" \
-  && for c in /usr/bin/pg_config16 /usr/lib/postgresql16/bin/pg_config /usr/bin/pg_config $(find /usr -type f -name pg_config 2>/dev/null); do \
-       if [ -x "$c" ] && "$c" --version 2>/dev/null | grep -q "PostgreSQL 16" && [ -f "$("$c" --pgxs 2>/dev/null)" ]; then \
-         PG_CONFIG_BIN="$c"; \
-         break; \
-       fi; \
-     done \
-  && test -n "$PG_CONFIG_BIN" \
-  && echo "Using PG_CONFIG: $PG_CONFIG_BIN" \
-  && make -C /tmp/pgvector PG_CONFIG="$PG_CONFIG_BIN" \
-  && make -C /tmp/pgvector PG_CONFIG="$PG_CONFIG_BIN" install \
-  && apk del .build-deps \
-  && rm -rf /tmp/pgvector \
-  && mkdir -p /var/lib/postgresql/data \
-  && mkdir -p /run/postgresql \
-  && mkdir -p /var/log/supervisor \
-  && chown -R postgres:postgres /var/lib/postgresql /run/postgresql /var/log/supervisor
+  postgresql16-client \
+  curl
 
 WORKDIR /app
 
@@ -61,17 +37,12 @@ COPY --from=build /app/node_modules/dotenv ./node_modules/dotenv
 
 # Copy entrypoint and supervisor config
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-COPY supervisord.conf /etc/supervisord.conf
 RUN chmod +x /docker-entrypoint.sh
 
 # Environment defaults
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-ENV PGDATA=/var/lib/postgresql/data
-ENV DB_NAME=royal_careerdb
-ENV DB_USER=postgres
-ENV DB_PASSWORD=postgres
 
 EXPOSE 3000
 
