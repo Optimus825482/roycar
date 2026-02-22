@@ -267,16 +267,18 @@ export async function POST(
     }
 
     // Flush any remaining pending chars at end of stream
+    // CRITICAL: sqlPendingChars (Phase 2 buffer) represents EARLIER content
+    // in the stream than pendingChars (Phase 1 buffer), so order matters.
     function flushPending(): string {
-      let result = "";
-      if (!insideThink && pendingChars) {
-        result += pendingChars;
-      }
+      // Phase 1 flush: emit remaining chars if not inside <think>
+      const phase1Flush = !insideThink && pendingChars ? pendingChars : "";
       pendingChars = "";
-      if (!insideSqlTag && sqlPendingChars) {
-        result += sqlPendingChars;
-      }
+
+      // Phase 2 flush: sqlPendingChars comes BEFORE phase1Flush in stream order
+      // because sqlPendingChars was already Phase-1-processed content
+      const result = !insideSqlTag ? sqlPendingChars + phase1Flush : "";
       sqlPendingChars = "";
+
       return result;
     }
 
