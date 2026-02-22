@@ -35,8 +35,8 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       DATABASE_URL: postgresql://postgres:postgres@db:5432/royal_careerdb
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/"]
       interval: 30s
