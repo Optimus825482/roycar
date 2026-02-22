@@ -26,8 +26,10 @@ RUN apk add --no-cache \
   git \
   postgresql16-dev \
   && git clone --depth 1 --branch v0.8.0 https://github.com/pgvector/pgvector.git /tmp/pgvector \
-  && make -C /tmp/pgvector PG_CONFIG=/usr/lib/postgresql16/bin/pg_config \
-  && make -C /tmp/pgvector PG_CONFIG=/usr/lib/postgresql16/bin/pg_config install \
+  && PG_CONFIG_BIN="$(command -v pg_config)" \
+  && test -n "$PG_CONFIG_BIN" \
+  && make -C /tmp/pgvector PG_CONFIG="$PG_CONFIG_BIN" \
+  && make -C /tmp/pgvector PG_CONFIG="$PG_CONFIG_BIN" install \
   && apk del .build-deps \
   && rm -rf /tmp/pgvector \
   && mkdir -p /var/lib/postgresql/data \
