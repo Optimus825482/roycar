@@ -17,6 +17,7 @@ import {
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: "📊" },
+  { href: "/admin/basvurular", label: "Başvurular", icon: "📋" },
   { href: "/admin/form-builder", label: "Form Builder", icon: "📝" },
   { href: "/admin/on-eleme", label: "Ön Eleme", icon: "🎯" },
   { href: "/admin/chat", label: "AI Asistan", icon: "🤖" },

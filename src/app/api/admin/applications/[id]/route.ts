@@ -49,10 +49,19 @@ export async function GET(
       select: {
         id: true,
         applicationNo: true,
+        fullName: true,
         status: true,
         submittedAt: true,
         formConfig: { select: { id: true, title: true } },
         department: { select: { name: true } },
+        evaluation: {
+          select: {
+            overallScore: true,
+            status: true,
+            evaluatedAt: true,
+            report: true,
+          },
+        },
       },
       orderBy: { submittedAt: "desc" },
     });

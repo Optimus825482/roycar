@@ -61,7 +61,12 @@ export async function GET(req: NextRequest) {
         include: {
           department: { select: { name: true } },
           evaluation: {
-            select: { overallScore: true, status: true, report: true },
+            select: {
+              overallScore: true,
+              status: true,
+              report: true,
+              evaluatedAt: true,
+            },
           },
         },
         orderBy:
