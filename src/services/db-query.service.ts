@@ -172,6 +172,14 @@ TABLO YAPISI:
 ### import_logs (Veri Aktarım Logları)
 - id (bigint PK), file_name (text), total_rows (int), imported_count (int), skipped_count (int), status (text), created_at (timestamptz)
 
+### import_field_definitions (Dinamik Alan Tanımları)
+- id (bigint PK), field_name (text — orijinal sütun başlığı), normalized_name (text unique — ASCII normalize), field_category (text: personal/education/experience/contact/legal/housing/media/general), data_type (text: text/date/boolean/number), is_active (bool), usage_count (int — kaç import'ta kullanıldı), created_at (timestamptz)
+- NOT: Her import dosyasının sütun başlıkları otomatik kaydedilir. Aynı sütun başlığı tekrar gelirse usage_count artar.
+
+### application_field_values (Başvuru Dinamik Alan Değerleri)
+- id (bigint PK), application_id (FK→applications), field_definition_id (FK→import_field_definitions), value (text), created_at (timestamptz)
+- NOT: Import edilen dosyadaki sistem alanları dışındaki TÜM sütun değerleri burada saklanır. JOIN ile alan adını alabilirsin.
+
 ### admin_users (Yöneticiler)
 - id (bigint PK), email (text unique), full_name (text), role (text)
 
@@ -179,4 +187,7 @@ TABLO YAPISI:
 - Toplam başvuru sayısı: [SQL_QUERY]SELECT COUNT(*) as total FROM applications[/SQL_QUERY]
 - Departman bazlı dağılım: [SQL_QUERY]SELECT d.name, COUNT(a.id) as count FROM applications a JOIN departments d ON a.department_id = d.id GROUP BY d.name ORDER BY count DESC[/SQL_QUERY]
 - En yüksek puanlı adaylar: [SQL_QUERY]SELECT a.full_name, a.email, e.overall_score, d.name as department FROM evaluations e JOIN applications a ON e.application_id = a.id JOIN departments d ON a.department_id = d.id WHERE e.status = 'completed' ORDER BY e.overall_score DESC LIMIT 10[/SQL_QUERY]
+- Dinamik alan tanımları (hangi sütun başlıkları bulundu): [SQL_QUERY]SELECT field_name, field_category, data_type, usage_count FROM import_field_definitions WHERE is_active = true ORDER BY usage_count DESC[/SQL_QUERY]
+- Bir adayın tüm dinamik alan değerleri: [SQL_QUERY]SELECT a.full_name, fd.field_name, fd.field_category, fv.value FROM application_field_values fv JOIN applications a ON fv.application_id = a.id JOIN import_field_definitions fd ON fv.field_definition_id = fd.id WHERE a.id = 1 ORDER BY fd.field_category, fd.field_name[/SQL_QUERY]
+- Belirli bir alan değerine göre aday filtrele: [SQL_QUERY]SELECT a.full_name, a.email, fv.value FROM application_field_values fv JOIN applications a ON fv.application_id = a.id JOIN import_field_definitions fd ON fv.field_definition_id = fd.id WHERE fd.normalized_name = 'sehir' AND fv.value ILIKE '%istanbul%' LIMIT 20[/SQL_QUERY]
 `;

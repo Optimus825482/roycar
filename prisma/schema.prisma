@@ -184,18 +184,57 @@ model Application {
   responseSummary Json?    @map("response_summary")
   importLogId     BigInt?  @map("import_log_id")
 
-  formConfig FormConfig           @relation(fields: [formConfigId], references: [id])
-  department Department           @relation(fields: [departmentId], references: [id])
-  responses  ApplicationResponse[]
-  evaluation Evaluation?
-  importLog  ImportLog?           @relation(fields: [importLogId], references: [id])
+  formConfig   FormConfig           @relation(fields: [formConfigId], references: [id])
+  department   Department           @relation(fields: [departmentId], references: [id])
+  responses    ApplicationResponse[]
+  evaluation   Evaluation?
+  importLog    ImportLog?           @relation(fields: [importLogId], references: [id])
   screeningResults ScreeningResult[]
+  fieldValues  ApplicationFieldValue[]
 
   @@index([email, departmentId])
   @@index([status])
   @@index([departmentId])
   @@index([submittedAt])
   @@map("applications")
+}
+
+// ─── Dinamik Alan Tanımları (Import Sütun Başlıkları) ───
+
+model ImportFieldDefinition {
+  id             BigInt   @id @default(autoincrement())
+  fieldName      String   @map("field_name")
+  normalizedName String   @unique @map("normalized_name")
+  fieldCategory  String   @default("general") @map("field_category")
+  dataType       String   @default("text") @map("data_type")
+  isActive       Boolean  @default(true) @map("is_active")
+  usageCount     Int      @default(0) @map("usage_count")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  values ApplicationFieldValue[]
+
+  @@index([fieldCategory])
+  @@index([isActive])
+  @@map("import_field_definitions")
+}
+
+// ─── Başvuru Dinamik Alan Değerleri ───
+
+model ApplicationFieldValue {
+  id                BigInt   @id @default(autoincrement())
+  applicationId     BigInt   @map("application_id")
+  fieldDefinitionId BigInt   @map("field_definition_id")
+  value             String   @map("value")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  application     Application          @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fieldDefinition ImportFieldDefinition @relation(fields: [fieldDefinitionId], references: [id])
+
+  @@unique([applicationId, fieldDefinitionId])
+  @@index([applicationId])
+  @@index([fieldDefinitionId])
+  @@index([value])
+  @@map("application_field_values")
 }
 
 // ─── Başvuru Yanıtları ───

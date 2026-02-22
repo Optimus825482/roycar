@@ -29,6 +29,7 @@ const SYSTEM_FIELDS = [
   { value: "department", label: "Departman" },
   { value: "submittedAt", label: "Başvuru Tarihi" },
   { value: "status", label: "Durum" },
+  { value: "_dynamic", label: "📋 Dinamik Alan (Otomatik Kaydet)" },
   { value: "_skip", label: "— Atla —" },
 ];
 
@@ -111,7 +112,16 @@ export default function DataImportPage() {
         if (json.success) {
           setHeaders(json.data.headers);
           setAutoMapping(json.data.autoMapping);
-          setColumnMapping(json.data.autoMapping);
+          // Sistem alanına eşleşmemiş sütunları otomatik "dinamik alan" yap
+          const enrichedMapping: Record<string, string> = {};
+          for (const h of json.data.headers as string[]) {
+            if (json.data.autoMapping[h]) {
+              enrichedMapping[h] = json.data.autoMapping[h];
+            } else {
+              enrichedMapping[h] = "_dynamic"; // Otomatik dinamik alan
+            }
+          }
+          setColumnMapping(enrichedMapping);
           setSampleRows(json.data.sampleRows);
           setTotalRows(json.data.totalRows);
           setHeaderRowIndex(json.data.headerRowIndex ?? 0);
@@ -183,6 +193,9 @@ export default function DataImportPage() {
   const mappedCount = Object.values(columnMapping).filter(
     (v) => v && v !== "_skip",
   ).length;
+  const dynamicCount = Object.values(columnMapping).filter(
+    (v) => v === "_dynamic",
+  ).length;
   const hasRequired =
     Object.values(columnMapping).includes("fullName") &&
     Object.values(columnMapping).includes("email");
@@ -251,10 +264,17 @@ export default function DataImportPage() {
             <CardContent className="space-y-4">
               <p className="text-sm text-mr-text-muted">
                 Dosyadaki sütunları sistem alanlarıyla eşleştirin.
+                Eşleşmeyen sütunlar <strong>dinamik alan</strong> olarak otomatik kaydedilir.
                 {mappedCount > 0 && (
                   <span className="text-mr-navy font-medium">
                     {" "}
                     {mappedCount} sütun eşleştirildi.
+                  </span>
+                )}
+                {dynamicCount > 0 && (
+                  <span className="text-mr-gold font-medium">
+                    {" "}
+                    {dynamicCount} dinamik alan.
                   </span>
                 )}
                 {!hasRequired && (
@@ -294,6 +314,11 @@ export default function DataImportPage() {
                     {autoMapping[h] && (
                       <Badge variant="secondary" className="text-xs">
                         Otomatik
+                      </Badge>
+                    )}
+                    {!autoMapping[h] && columnMapping[h] === "_dynamic" && (
+                      <Badge variant="outline" className="text-xs text-mr-gold border-mr-gold">
+                        Dinamik
                       </Badge>
                     )}
                   </div>

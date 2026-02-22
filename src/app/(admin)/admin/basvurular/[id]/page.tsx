@@ -31,6 +31,17 @@ interface OtherApplication {
   department: { name: string };
 }
 
+interface FieldValue {
+  id: string;
+  value: string;
+  fieldDefinition: {
+    id: string;
+    fieldName: string;
+    fieldCategory: string;
+    dataType: string;
+  };
+}
+
 interface ApplicationDetail {
   id: string;
   applicationNo: string;
@@ -57,6 +68,7 @@ interface ApplicationDetail {
     evaluatedAt: string | null;
     retryCount: number;
   } | null;
+  fieldValues?: FieldValue[];
   otherApplications?: OtherApplication[];
 }
 
@@ -76,6 +88,17 @@ const STATUS_LABELS: Record<string, string> = {
   shortlisted: "Ön Eleme",
   rejected: "Reddedildi",
   hired: "İşe Alındı",
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  personal: "Kişisel Bilgiler",
+  education: "Eğitim",
+  experience: "İş Deneyimi",
+  contact: "İletişim",
+  legal: "Yasal",
+  housing: "Lojman/Konaklama",
+  media: "Dosya/Medya",
+  general: "Diğer",
 };
 
 const STATUS_OPTIONS = ["new", "reviewed", "shortlisted", "rejected", "hired"];
@@ -433,6 +456,56 @@ export default function ApplicationDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Dynamic Field Values (import'tan gelen ek veriler) */}
+      {app.fieldValues && app.fieldValues.length > 0 && (() => {
+        // Kategoriye göre grupla
+        const grouped: Record<string, FieldValue[]> = {};
+        for (const fv of app.fieldValues) {
+          const cat = fv.fieldDefinition.fieldCategory || "general";
+          if (!grouped[cat]) grouped[cat] = [];
+          grouped[cat].push(fv);
+        }
+        const categoryOrder = ["personal", "education", "experience", "contact", "legal", "housing", "media", "general"];
+        const sortedCategories = Object.keys(grouped).sort(
+          (a, b) => categoryOrder.indexOf(a) - categoryOrder.indexOf(b)
+        );
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm text-mr-text-secondary">
+                İçe Aktarılan Veriler ({app.fieldValues.length} alan)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {sortedCategories.map((cat) => (
+                  <div key={cat}>
+                    <h3 className="text-xs font-medium text-mr-navy mb-2 uppercase tracking-wide">
+                      {CATEGORY_LABELS[cat] || cat}
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {grouped[cat].map((fv) => (
+                        <div
+                          key={fv.id}
+                          className="flex justify-between items-start border-b border-border/50 pb-1"
+                        >
+                          <span className="text-sm text-mr-text-muted truncate max-w-[45%]" title={fv.fieldDefinition.fieldName}>
+                            {fv.fieldDefinition.fieldName}
+                          </span>
+                          <span className="text-sm text-mr-text-secondary text-right max-w-[50%] wrap-break-word">
+                            {fv.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Application Responses */}
       <Card>

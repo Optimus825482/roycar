@@ -22,6 +22,19 @@ export async function GET(
           orderBy: { question: { sortOrder: "asc" } },
         },
         evaluation: true,
+        fieldValues: {
+          include: {
+            fieldDefinition: {
+              select: {
+                id: true,
+                fieldName: true,
+                fieldCategory: true,
+                dataType: true,
+              },
+            },
+          },
+          orderBy: { fieldDefinition: { fieldCategory: "asc" } },
+        },
       },
     });
 

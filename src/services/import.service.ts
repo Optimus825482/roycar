@@ -319,6 +319,154 @@ interface ImportResult {
   errors: { row: number; reason: string }[];
 }
 
+// Sistem alanları — bunlar Application tablosundaki sabit kolonlara eşleşir
+const SYSTEM_FIELD_KEYS = new Set([
+  "fullName",
+  "email",
+  "phone",
+  "department",
+  "submittedAt",
+  "status",
+]);
+
+// ─── Dinamik Alan Tanımlarını Oluştur/Güncelle ───
+// Dosyadaki sütun başlıklarını tanımlayıp DB'ye kaydeder.
+// Daha önce aynı normalized name ile kaydedilmişse tekrar oluşturmaz.
+
+async function ensureFieldDefinitions(
+  headers: string[],
+  columnMapping: Record<string, string>,
+): Promise<Map<string, bigint>> {
+  const fieldMap = new Map<string, bigint>(); // originalHeader → definitionId
+
+  for (const header of headers) {
+    const mappedField = columnMapping[header];
+    // Sistem alanlarını (fullName, email, phone, department, submittedAt, status) atla
+    if (mappedField && SYSTEM_FIELD_KEYS.has(mappedField)) continue;
+    // Açıkça "atla" olarak işaretlenen sütunları atla
+    if (mappedField === "_skip") continue;
+    // "_dynamic" veya eşleştirilmemiş sütunlar → dinamik alan olarak kaydet
+
+    const normalized = normalizeColumnName(header);
+    if (!normalized) continue;
+
+    // Kategori tahmini
+    const category = guessFieldCategory(normalized);
+
+    // Upsert: varsa güncelle (usageCount++), yoksa oluştur
+    const def = await prisma.importFieldDefinition.upsert({
+      where: { normalizedName: normalized },
+      update: { usageCount: { increment: 1 } },
+      create: {
+        fieldName: header.trim(),
+        normalizedName: normalized,
+        fieldCategory: category,
+        dataType: guessDataType(normalized),
+        usageCount: 1,
+      },
+    });
+
+    fieldMap.set(header, def.id);
+  }
+
+  return fieldMap;
+}
+
+// Alan kategorisi tahmini (Türkçe + İngilizce)
+function guessFieldCategory(normalized: string): string {
+  const personal = [
+    "dogum",
+    "cinsiyet",
+    "gender",
+    "baba",
+    "anne",
+    "medeni",
+    "kan grubu",
+    "tc",
+    "kimlik",
+    "birth",
+  ];
+  const education = [
+    "universite",
+    "okul",
+    "bolum",
+    "egitim",
+    "mezun",
+    "university",
+    "school",
+    "education",
+    "faculty",
+  ];
+  const experience = [
+    "staj",
+    "deneyim",
+    "tecrube",
+    "calis",
+    "is",
+    "intern",
+    "experience",
+    "work",
+  ];
+  const contact = [
+    "acil",
+    "adres",
+    "sehir",
+    "ilce",
+    "mahalle",
+    "emergency",
+    "address",
+    "city",
+  ];
+  const legal = [
+    "sabika",
+    "sorusturma",
+    "ceza",
+    "criminal",
+    "investigation",
+    "record",
+  ];
+  const housing = ["lojman", "konaklama", "barinma", "housing", "accommodation"];
+  const media = [
+    "resim",
+    "fotograf",
+    "photo",
+    "image",
+    "dosya",
+    "file",
+    "cv",
+    "ozgecmis",
+  ];
+
+  for (const kw of personal)
+    if (normalized.includes(kw)) return "personal";
+  for (const kw of education)
+    if (normalized.includes(kw)) return "education";
+  for (const kw of experience)
+    if (normalized.includes(kw)) return "experience";
+  for (const kw of contact) if (normalized.includes(kw)) return "contact";
+  for (const kw of legal) if (normalized.includes(kw)) return "legal";
+  for (const kw of housing)
+    if (normalized.includes(kw)) return "housing";
+  for (const kw of media) if (normalized.includes(kw)) return "media";
+
+  return "general";
+}
+
+// Alan veri tipi tahmini
+function guessDataType(normalized: string): string {
+  if (normalized.includes("tarih") || normalized.includes("date"))
+    return "date";
+  if (
+    normalized.includes("var mi") ||
+    normalized.includes("mi ") ||
+    normalized.includes("midir")
+  )
+    return "boolean";
+  if (normalized.includes("puan") || normalized.includes("score"))
+    return "number";
+  return "text";
+}
+
 export async function importApplications(
   rows: Record<string, string>[],
   columnMapping: Record<string, string>,
@@ -352,6 +500,11 @@ export async function importApplications(
   // Get departments for name matching
   const departments = await prisma.department.findMany();
   const deptMap = new Map(departments.map((d) => [d.name.toLowerCase(), d.id]));
+
+  // ─── Dinamik Alan Tanımlarını Hazırla ───
+  // Tüm header'lar için alan tanımları oluştur/güncelle
+  const allHeaders = Object.keys(rows[0] || {});
+  const fieldDefMap = await ensureFieldDefinitions(allHeaders, columnMapping);
 
   // Excel/CSV satır numarası = headerRowIndex + 1 (header) + i + 1 (1-indexed)
   const rowOffset = headerRowIndex + 2;
@@ -442,6 +595,19 @@ export async function importApplications(
       // Generate application number
       const appNo = `MR-IMP-${Date.now()}-${i}`;
 
+      // ─── Başvuru Oluştur + Dinamik Alan Değerlerini Kaydet ───
+      const fieldValuesData: { fieldDefinitionId: bigint; value: string }[] = [];
+      for (const [csvCol, value] of Object.entries(row)) {
+        if (!value?.trim()) continue;
+        const defId = fieldDefMap.get(csvCol);
+        if (defId) {
+          fieldValuesData.push({
+            fieldDefinitionId: defId,
+            value: value.trim(),
+          });
+        }
+      }
+
       await prisma.application.create({
         data: {
           applicationNo: appNo,
@@ -453,6 +619,9 @@ export async function importApplications(
           status: "new",
           responseSummary: JSON.parse(JSON.stringify(responseSummary)),
           importLogId: importLog.id,
+          fieldValues: {
+            create: fieldValuesData,
+          },
         },
       });
 
