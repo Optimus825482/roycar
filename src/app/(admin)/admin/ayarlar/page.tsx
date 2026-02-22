@@ -5,6 +5,8 @@ import { toast as toastNotify } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { RoyalLoader } from "@/components/shared/RoyalLoader";
+import { Bot, Mic, MessageSquare, Users, Key, Lightbulb, ClipboardList, Check, Volume2 } from "lucide-react";
 
 interface ProviderInfo {
   key: string;
@@ -64,10 +66,10 @@ const DEFAULT_PERMISSIONS: UserPermissions = {
 };
 
 const TABS = [
-  { key: "ai", label: "Yapay Zeka", icon: "🤖" },
-  { key: "voice", label: "Sesli Sohbet", icon: "🎙️" },
-  { key: "prompts", label: "Sistem Prompt'ları", icon: "💬" },
-  { key: "users", label: "Kullanıcı Yönetimi", icon: "👥" },
+  { key: "ai", label: "Yapay Zeka", icon: Bot },
+  { key: "voice", label: "Sesli Sohbet", icon: Mic },
+  { key: "prompts", label: "Sistem Prompt'ları", icon: MessageSquare },
+  { key: "users", label: "Kullanıcı Yönetimi", icon: Users },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -317,7 +319,9 @@ export default function SettingsPage() {
 
   if (loading || !data) {
     return (
-      <div className="text-center py-12 text-mr-text-muted">Yükleniyor...</div>
+      <div className="flex items-center justify-center py-12">
+        <RoyalLoader size="lg" text="Ayarlar yükleniyor..." variant="spinner" />
+      </div>
     );
   }
 
@@ -341,13 +345,13 @@ export default function SettingsPage() {
               aria-selected={activeTab === tab.key}
               aria-controls={`panel-${tab.key}`}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors -mb-px ${
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-all cursor-pointer -mb-px ${
                 activeTab === tab.key
                   ? "border-mr-gold text-mr-navy"
                   : "border-transparent text-mr-text-muted hover:text-mr-navy hover:border-gray-300"
               }`}
             >
-              <span>{tab.icon}</span>
+              <tab.icon className="w-4 h-4" />
               {tab.label}
             </button>
           ))}
@@ -361,7 +365,7 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base text-mr-navy flex items-center gap-2">
-                🤖 Yapay Zeka Sağlayıcı
+                <Bot className="w-4 h-4 inline-block mr-1" /> Yapay Zeka Sağlayıcı
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -428,7 +432,7 @@ export default function SettingsPage() {
                             variant="secondary"
                             className="text-xs bg-green-50 text-green-700 border-green-200"
                           >
-                            API Key ✓
+                            API Key <Check className="w-3.5 h-3.5 inline-block ml-0.5" />
                           </Badge>
                         ) : (
                           <Badge variant="destructive" className="text-xs">
@@ -466,7 +470,7 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base text-mr-navy flex items-center gap-2">
-                🔑 API Anahtarları
+                <Key className="w-4 h-4 inline-block mr-1" /> API Anahtarları
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -494,7 +498,7 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base text-mr-navy flex items-center gap-2">
-                🎙️ Konuşma Hızı
+                <Mic className="w-4 h-4 inline-block mr-1" /> Konuşma Hızı
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -530,7 +534,7 @@ export default function SettingsPage() {
                       <button
                         key={preset}
                         onClick={() => setTtsSpeechRate(preset)}
-                        className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${
+                        className={`px-2.5 py-1 text-xs rounded-md border transition-colors cursor-pointer ${
                           Math.abs(ttsSpeechRate - preset) < 0.01
                             ? "bg-mr-gold/20 border-mr-gold text-mr-navy font-medium"
                             : "border-gray-200 text-mr-text-muted hover:border-mr-gold/40"
@@ -555,7 +559,7 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base text-mr-navy flex items-center gap-2">
-                🗣️ Doğal Konuşma
+                <Volume2 className="w-4 h-4 inline-block mr-1" /> Doğal Konuşma
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -565,28 +569,28 @@ export default function SettingsPage() {
               </p>
               <div className="space-y-2">
                 <div className="flex items-start gap-2 text-sm">
-                  <span className="text-mr-gold mt-0.5">✓</span>
+                  <Check className="w-4 h-4 text-mr-gold mt-0.5 shrink-0" />
                   <span className="text-mr-text-primary">
                     Cümle sonlarında doğal duraklamalar (nokta, virgül, soru
                     işareti)
                   </span>
                 </div>
                 <div className="flex items-start gap-2 text-sm">
-                  <span className="text-mr-gold mt-0.5">✓</span>
+                  <Check className="w-4 h-4 text-mr-gold mt-0.5 shrink-0" />
                   <span className="text-mr-text-primary">
                     Soru cümlelerinde ton yükselmesi, ifade cümlelerinde ton
                     düşmesi
                   </span>
                 </div>
                 <div className="flex items-start gap-2 text-sm">
-                  <span className="text-mr-gold mt-0.5">✓</span>
+                  <Check className="w-4 h-4 text-mr-gold mt-0.5 shrink-0" />
                   <span className="text-mr-text-primary">
                     Uzun cümlelerde hafif yavaşlama, kısa cümlelerde hafif
                     hızlanma
                   </span>
                 </div>
                 <div className="flex items-start gap-2 text-sm">
-                  <span className="text-mr-gold mt-0.5">✓</span>
+                  <Check className="w-4 h-4 text-mr-gold mt-0.5 shrink-0" />
                   <span className="text-mr-text-primary">
                     Türkçe yerel ses tercihi (Microsoft Emel veya en iyi yerel
                     ses)
@@ -594,7 +598,7 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
-                💡 Sesli sohbet, tarayıcınızın Web Speech API desteğine
+                <Lightbulb className="w-4 h-4 inline-block mr-1" /> Sesli sohbet, tarayıcınızın Web Speech API desteğine
                 bağlıdır. Microsoft Edge en iyi Türkçe ses deneyimini sunar.
               </div>
             </CardContent>
@@ -609,7 +613,7 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base text-mr-navy flex items-center gap-2">
-                💬 AI Chat — Sistem Prompt&apos;u
+                <MessageSquare className="w-4 h-4 inline-block mr-1" /> AI Chat — Sistem Prompt&apos;u
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -650,7 +654,7 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base text-mr-navy flex items-center gap-2">
-                📋 Başvuru Değerlendirme — Sistem Prompt&apos;u
+                <ClipboardList className="w-4 h-4 inline-block mr-1" /> Başvuru Değerlendirme — Sistem Prompt&apos;u
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -697,7 +701,7 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle className="text-base text-mr-navy flex items-center justify-between">
                 <span className="flex items-center gap-2">
-                  👥 Kullanıcı Yönetimi
+                  <Users className="w-4 h-4 inline-block mr-1" /> Kullanıcı Yönetimi
                 </span>
                 <Button
                   onClick={() => setShowAddUser(!showAddUser)}

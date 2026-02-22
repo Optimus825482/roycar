@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useVoiceChat } from "@/hooks/useVoiceChat";
+import { RoyalLoader } from "@/components/shared/RoyalLoader";
 
 interface ChatSession {
   id: string;
@@ -1101,8 +1102,8 @@ export default function ChatPage() {
           aria-label="Sohbet listesi"
         >
           {loadingSessions ? (
-            <div role="listitem" className="text-sm text-mr-text-muted p-2" aria-live="polite">
-              Yükleniyor...
+            <div role="listitem" className="p-2" aria-live="polite">
+              <RoyalLoader size="sm" variant="dots" />
             </div>
           ) : sessions.length === 0 ? (
               <div role="listitem" className="text-sm text-mr-text-muted p-2">

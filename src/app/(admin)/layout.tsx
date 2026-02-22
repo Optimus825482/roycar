@@ -14,15 +14,28 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  LayoutDashboard,
+  ClipboardList,
+  PenTool,
+  Filter,
+  Bot,
+  FolderInput,
+  Settings,
+  LogOut,
+  Menu,
+  ChevronDown,
+  User,
+} from "lucide-react";
 
 const NAV_ITEMS = [
-  { href: "/admin", label: "Dashboard", icon: "📊" },
-  { href: "/admin/basvurular", label: "Başvurular", icon: "📋" },
-  { href: "/admin/form-builder", label: "Form Builder", icon: "📝" },
-  { href: "/admin/on-eleme", label: "Ön Eleme", icon: "🎯" },
-  { href: "/admin/chat", label: "AI Asistan", icon: "🤖" },
-  { href: "/admin/veri-aktarimi", label: "Veri Aktarımı", icon: "📁" },
-  { href: "/admin/ayarlar", label: "Ayarlar", icon: "⚙️" },
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/basvurular", label: "Başvurular", icon: ClipboardList },
+  { href: "/admin/form-builder", label: "Form Builder", icon: PenTool },
+  { href: "/admin/on-eleme", label: "Ön Eleme", icon: Filter },
+  { href: "/admin/chat", label: "AI Asistan", icon: Bot },
+  { href: "/admin/veri-aktarimi", label: "Veri Aktarımı", icon: FolderInput },
+  { href: "/admin/ayarlar", label: "Ayarlar", icon: Settings },
 ];
 
 function AdminLayoutInner({ children }: { children: React.ReactNode }) {
@@ -52,13 +65,15 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="p-4 border-b border-white/10">
-            <Link href="/admin" className="flex items-center gap-2">
+          <div className="p-5 border-b border-white/10">
+            <Link href="/admin" className="flex items-center gap-3 cursor-pointer group">
               <Image
-                src="/images/logo.png"
+                src="/images/logo_NOBG.PNG"
                 alt="Merit Royal"
-                width={120}
-                height={40}
+                width={140}
+                height={46}
+                className="transition-opacity group-hover:opacity-90"
+                priority
               />
             </Link>
           </div>
@@ -70,6 +85,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                 item.href === "/admin"
                   ? pathname === "/admin"
                   : pathname.startsWith(item.href);
+              const IconComponent = item.icon;
               return (
                 <Link
                   key={item.href}
@@ -77,13 +93,13 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                   onClick={() => setSidebarOpen(false)}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors",
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-200",
                     isActive
-                      ? "bg-mr-gold/20 text-mr-gold"
-                      : "text-white/70 hover:bg-white/5 hover:text-white",
+                      ? "bg-mr-gold/20 text-mr-gold shadow-sm"
+                      : "text-white/70 hover:bg-white/8 hover:text-white hover:translate-x-0.5",
                   )}
                 >
-                  <span className="text-lg">{item.icon}</span>
+                  <IconComponent className="w-5 h-5 shrink-0" />
                   {item.label}
                 </Link>
               );
@@ -92,9 +108,16 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
           {/* User */}
           <div className="p-3 border-t border-white/10">
-            <div className="text-xs text-white/40 px-3 mb-1">Giriş yapan</div>
-            <div className="text-sm text-white/80 px-3 truncate">
-              {session?.user?.name || session?.user?.email}
+            <div className="flex items-center gap-3 px-3 py-2">
+              <div className="w-8 h-8 rounded-full bg-mr-gold/20 flex items-center justify-center shrink-0">
+                <User className="w-4 h-4 text-mr-gold" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs text-white/40">Giriş yapan</div>
+                <div className="text-sm text-white/80 truncate">
+                  {session?.user?.name || session?.user?.email}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -103,21 +126,13 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-white border-b border-border px-4 h-14 flex items-center justify-between">
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-border px-4 h-14 flex items-center justify-between">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden p-2 -ml-2 text-mr-navy"
+            className="lg:hidden p-2 -ml-2 text-mr-navy cursor-pointer hover:text-mr-gold transition-colors"
             aria-label="Menüyü aç"
           >
-            <svg
-              width="24"
-              height="24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M3 12h18M3 6h18M3 18h18" />
-            </svg>
+            <Menu className="w-6 h-6" />
           </button>
 
           <div className="hidden lg:block text-sm text-mr-text-secondary">
@@ -129,28 +144,24 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="gap-2"
+                className="gap-2 cursor-pointer hover:bg-mr-navy/5 transition-colors"
                 aria-label="Kullanıcı menüsü"
               >
-                <span className="hidden sm:inline text-sm">
+                <div className="w-7 h-7 rounded-full bg-mr-navy/10 flex items-center justify-center">
+                  <User className="w-4 h-4 text-mr-navy" />
+                </div>
+                <span className="hidden sm:inline text-sm font-medium">
                   {session?.user?.name || "Admin"}
                 </span>
-                <svg
-                  width="16"
-                  height="16"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M4 6l4 4 4-4" />
-                </svg>
+                <ChevronDown className="w-4 h-4 text-mr-text-secondary" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="min-w-[160px]">
               <DropdownMenuItem
                 onClick={() => signOut({ callbackUrl: "/giris" })}
-                className="text-mr-error cursor-pointer"
+                className="text-mr-error cursor-pointer gap-2"
               >
+                <LogOut className="w-4 h-4" />
                 Çıkış Yap
               </DropdownMenuItem>
             </DropdownMenuContent>

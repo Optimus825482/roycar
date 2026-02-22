@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { QuestionRenderer } from "./QuestionRenderer";
 import { WizardNavigation } from "./WizardNavigation";
 import { ProgressIndicator } from "./ProgressIndicator";
-import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { RoyalLoader } from "@/components/shared/RoyalLoader";
 import {
   Select,
   SelectContent,
@@ -437,7 +437,7 @@ export function WizardContainer() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <LoadingSpinner />
+        <RoyalLoader size="lg" text="Form yükleniyor..." variant="spinner" />
       </div>
     );
   }

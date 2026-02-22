@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ApplicationDetailModal } from "@/components/admin/ApplicationDetailModal";
+import { RoyalTableSkeleton } from "@/components/shared/RoyalLoader";
 import {
     Select,
     SelectContent,
@@ -63,11 +64,11 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-    new: "bg-blue-100 text-blue-800 border-blue-200",
-    reviewed: "bg-amber-100 text-amber-800 border-amber-200",
-    shortlisted: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    rejected: "bg-red-100 text-red-800 border-red-200",
-    hired: "bg-green-100 text-green-800 border-green-200",
+    new: "bg-blue-600 text-white border-blue-700",
+    reviewed: "bg-amber-500 text-white border-amber-600",
+    shortlisted: "bg-emerald-600 text-white border-emerald-700",
+    rejected: "bg-red-600 text-white border-red-700",
+    hired: "bg-green-600 text-white border-green-700",
 };
 
 const EVAL_STATUS_LABELS: Record<string, string> = {
@@ -78,20 +79,20 @@ const EVAL_STATUS_LABELS: Record<string, string> = {
 };
 
 const EVAL_STATUS_COLORS: Record<string, string> = {
-    completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    pending: "bg-amber-50 text-amber-700 border-amber-200",
-    failed: "bg-red-50 text-red-700 border-red-200",
-    not_evaluated: "bg-gray-50 text-gray-500 border-gray-200",
+    completed: "bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold",
+    pending: "bg-amber-100 text-amber-800 border-amber-300 font-semibold",
+    failed: "bg-red-100 text-red-800 border-red-300 font-semibold",
+    not_evaluated: "bg-slate-100 text-slate-600 border-slate-300",
 };
 
 /* ─────────── Helper Components ─────────── */
 
 function ScoreBadge({ score }: { score: number | null | undefined }) {
-    if (score == null) return <Badge variant="outline" className="text-gray-400 border-gray-200">—</Badge>;
+    if (score == null) return <Badge variant="outline" className="text-slate-500 border-slate-300">—</Badge>;
 
-    let colorClass = "bg-red-50 text-red-700 border-red-200";
-    if (score >= 70) colorClass = "bg-emerald-50 text-emerald-700 border-emerald-200";
-    else if (score >= 40) colorClass = "bg-amber-50 text-amber-700 border-amber-200";
+    let colorClass = "bg-red-100 text-red-800 border-red-300 font-bold";
+    if (score >= 70) colorClass = "bg-emerald-100 text-emerald-800 border-emerald-300 font-bold";
+    else if (score >= 40) colorClass = "bg-amber-100 text-amber-800 border-amber-300 font-bold";
 
     return (
         <Badge variant="outline" className={`font-bold text-sm ${colorClass}`}>
@@ -146,6 +147,20 @@ export default function BasvurularPage() {
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
     const [page, setPage] = useState(1);
 
+    // Modal state
+    const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
+    const [modalOpen, setModalOpen] = useState(false);
+
+    const openDetail = useCallback((id: string) => {
+        setSelectedAppId(id);
+        setModalOpen(true);
+    }, []);
+
+    const closeDetail = useCallback(() => {
+        setModalOpen(false);
+        setSelectedAppId(null);
+    }, []);
+
     // Fetch departments
     useEffect(() => {
         fetch("/api/departments")
@@ -164,33 +179,32 @@ export default function BasvurularPage() {
     }, []);
 
     // Fetch applications
-    useEffect(() => {
-        let cancelled = false;
-        const fetchApplications = async () => {
-            setLoading(true);
-            try {
-                const params = new URLSearchParams({
-                    page: page.toString(),
-                    pageSize: "20",
-                    sortBy,
-                    sortOrder,
-                });
-                if (departmentFilter) params.set("departmentId", departmentFilter);
+    const fetchApplications = useCallback(async () => {
+        setLoading(true);
+        try {
+            const params = new URLSearchParams({
+                page: page.toString(),
+                pageSize: "20",
+                sortBy,
+                sortOrder,
+            });
+            if (departmentFilter) params.set("departmentId", departmentFilter);
 
-                const res = await fetch(`/api/admin/applications?${params}`);
-                const json = await res.json();
-                if (!cancelled && json.success) {
-                    setApplications(json.data);
-                    setMeta(json.meta);
-                }
-            } catch (err) {
-                console.error("Applications fetch error:", err);
+            const res = await fetch(`/api/admin/applications?${params}`);
+            const json = await res.json();
+            if (json.success) {
+                setApplications(json.data);
+                setMeta(json.meta);
             }
-            if (!cancelled) setLoading(false);
-        };
-        fetchApplications();
-        return () => { cancelled = true; };
+        } catch (err) {
+            console.error("Applications fetch error:", err);
+        }
+        setLoading(false);
     }, [page, departmentFilter, sortBy, sortOrder]);
+
+    useEffect(() => {
+        queueMicrotask(() => fetchApplications());
+    }, [fetchApplications]);
 
     // Sort toggle handler
     const handleSort = useCallback(
@@ -311,14 +325,7 @@ export default function BasvurularPage() {
                             </TableHeader>
                             <TableBody>
                                 {loading ? (
-                                    <TableRow>
-                                        <TableCell colSpan={8} className="text-center py-12">
-                                            <div className="flex flex-col items-center gap-2">
-                                                <div className="w-6 h-6 border-2 border-mr-gold border-t-transparent rounded-full animate-spin" />
-                                                <span className="text-sm text-mr-text-muted">Yükleniyor...</span>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
+                                    <RoyalTableSkeleton rows={6} cols={8} />
                                 ) : applications.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={8} className="text-center py-12">
@@ -333,6 +340,7 @@ export default function BasvurularPage() {
                                         <TableRow
                                             key={app.id}
                                             className="hover:bg-mr-gold/5 cursor-pointer transition-colors group"
+                                            onClick={() => openDetail(app.id)}
                                         >
                                             <TableCell className="text-sm text-mr-text-secondary">
                                                 {formatDate(app.submittedAt)}
@@ -374,15 +382,17 @@ export default function BasvurularPage() {
                                                 {formatDate(app.evaluation?.evaluatedAt)}
                                             </TableCell>
                                             <TableCell>
-                                                <Link href={`/admin/basvurular/${app.id}`}>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="opacity-0 group-hover:opacity-100 transition-opacity text-mr-navy hover:text-mr-gold"
-                                                    >
-                                                        →
-                                                    </Button>
-                                                </Link>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-mr-navy hover:text-mr-gold cursor-pointer"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        openDetail(app.id);
+                                                    }}
+                                                >
+                                                    →
+                                                </Button>
                                             </TableCell>
                                         </TableRow>
                                     ))
@@ -425,6 +435,14 @@ export default function BasvurularPage() {
                     </div>
                 </div>
             )}
+
+            {/* Application Detail Modal */}
+            <ApplicationDetailModal
+                applicationId={selectedAppId}
+                open={modalOpen}
+                onClose={closeDetail}
+                onUpdate={fetchApplications}
+            />
         </div>
     );
 }

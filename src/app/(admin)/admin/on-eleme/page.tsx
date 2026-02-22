@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { RoyalLoader } from "@/components/shared/RoyalLoader";
 import {
   Dialog,
   DialogContent,
@@ -615,7 +616,9 @@ export default function ScreeningPage() {
 
           {/* Application List */}
           {evalLoading ? (
-            <p className="text-sm text-mr-text-muted py-4">Yükleniyor...</p>
+            <div className="flex items-center gap-2 py-4">
+              <RoyalLoader size="sm" variant="spinner" text="Yükleniyor..." />
+            </div>
           ) : evalApps.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
@@ -1161,7 +1164,9 @@ export default function ScreeningPage() {
 
           {/* Criteria List */}
           {loading ? (
-            <p className="text-sm text-mr-text-muted">Yükleniyor...</p>
+            <div className="flex items-center gap-2 py-4">
+              <RoyalLoader size="sm" variant="spinner" text="Yükleniyor..." />
+            </div>
           ) : criteriaList.length === 0 && !showForm ? (
             <Card>
               <CardContent className="py-12 text-center">

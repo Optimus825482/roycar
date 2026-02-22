@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { RoyalLoader } from "@/components/shared/RoyalLoader";
 import {
   Dialog,
   DialogContent,
@@ -103,11 +104,11 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  new: "bg-blue-100 text-blue-800 border-blue-200",
-  reviewed: "bg-amber-100 text-amber-800 border-amber-200",
-  shortlisted: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  rejected: "bg-red-100 text-red-800 border-red-200",
-  hired: "bg-green-100 text-green-800 border-green-200",
+  new: "bg-blue-600 text-white border-blue-700",
+  reviewed: "bg-amber-500 text-white border-amber-600",
+  shortlisted: "bg-emerald-600 text-white border-emerald-700",
+  rejected: "bg-red-600 text-white border-red-700",
+  hired: "bg-green-600 text-white border-green-700",
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -135,10 +136,10 @@ const CATEGORY_ICON_COLORS: Record<string, string> = {
 const STATUS_OPTIONS = ["new", "reviewed", "shortlisted", "rejected", "hired"];
 
 const RECOMMENDATION_LABELS: Record<string, { label: string; color: string }> = {
-  shortlist: { label: "Ön Elemeyi Geçti", color: "bg-emerald-100 text-emerald-800 border-emerald-300" },
-  interview: { label: "Mülakata Çağır", color: "bg-blue-100 text-blue-800 border-blue-300" },
-  reject: { label: "Reddet", color: "bg-red-100 text-red-800 border-red-300" },
-  hire: { label: "İşe Al", color: "bg-green-100 text-green-800 border-green-300" },
+  shortlist: { label: "Ön Elemeyi Geçti", color: "bg-emerald-600 text-white border-emerald-700" },
+  interview: { label: "Mülakata Çağır", color: "bg-blue-600 text-white border-blue-700" },
+  reject: { label: "Reddet", color: "bg-red-600 text-white border-red-700" },
+  hire: { label: "İşe Al", color: "bg-green-600 text-white border-green-700" },
 };
 
 /* ─────────── Helper Components ─────────── */
@@ -355,10 +356,7 @@ export default function ApplicationDetailPage() {
   if (loading)
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-mr-gold border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm text-mr-text-muted">Yükleniyor...</span>
-        </div>
+        <RoyalLoader size="lg" text="Aday bilgileri yükleniyor..." variant="spinner" />
       </div>
     );
 
@@ -454,8 +452,8 @@ export default function ApplicationDetailPage() {
                 >
                   {evaluating ? (
                     <>
-                      <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-1" />
-                      Başlatılıyor...
+                      <RoyalLoader size="sm" variant="dots" />
+                      <span className="ml-1">Başlatılıyor...</span>
                     </>
                   ) : (
                     "🚀 AI Değerlendirmesi Oluştur"
@@ -495,8 +493,8 @@ export default function ApplicationDetailPage() {
             </div>
           ) : app.evaluation.status === "pending" ? (
               <div className="flex items-center gap-3 py-4">
-                <div className="w-6 h-6 border-2 border-mr-gold border-t-transparent rounded-full animate-spin" />
-                <p className="text-sm text-amber-600 font-medium">Değerlendirme devam ediyor...</p>
+                <RoyalLoader size="sm" variant="spinner" />
+                <p className="text-sm text-amber-600 font-semibold">Değerlendirme devam ediyor...</p>
               </div>
             ) : app.evaluation.status === "failed" ? (
                 <div className="flex items-center gap-3 py-4">

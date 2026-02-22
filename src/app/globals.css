@@ -23,9 +23,9 @@
   --mr-info: #2980b9;
 
   /* Metin */
-  --mr-text-primary: #1b2a4a;
-  --mr-text-secondary: #5a6b8a;
-  --mr-text-muted: #8a95aa;
+  --mr-text-primary: #0f1d36;
+    --mr-text-secondary: #364152;
+    --mr-text-muted: #5a6578;
 
   /* Arka Plan */
   --mr-bg-primary: #ffffff;
@@ -52,7 +52,7 @@
   --secondary: oklch(0.73 0.1 80);
   --secondary-foreground: oklch(0.22 0.04 260);
   --muted: oklch(0.96 0.005 80);
-  --muted-foreground: oklch(0.48 0.02 260);
+  --muted-foreground: oklch(0.40 0.03 260);
   /* Accent = Gold Light */
   --accent: oklch(0.82 0.08 80);
   --accent-foreground: oklch(0.22 0.04 260);
@@ -89,9 +89,9 @@
   --color-mr-warning: #d4a017;
   --color-mr-error: #c0392b;
   --color-mr-info: #2980b9;
-  --color-mr-text-primary: #1b2a4a;
-  --color-mr-text-secondary: #5a6b8a;
-  --color-mr-text-muted: #8a95aa;
+  --color-mr-text-primary: #0f1d36;
+    --color-mr-text-secondary: #364152;
+    --color-mr-text-muted: #5a6578;
   --color-mr-bg-secondary: #f5f3ef;
   --color-mr-bg-admin: #f8f9fc;
   --font-heading: var(--font-playfair);
@@ -154,4 +154,190 @@ h6 {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ─── Royal Career Loading Animations ─── */
+@keyframes royalPulse {
+
+  0%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-fade-in-scale {
+  animation: fadeInScale 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ─── 3D Shadow System ─── */
+
+/* Card-level 3D shadow */
+.shadow-3d {
+  box-shadow:
+    0 1px 2px rgba(27, 42, 74, 0.04),
+    0 4px 8px rgba(27, 42, 74, 0.06),
+    0 8px 16px rgba(27, 42, 74, 0.04),
+    0 1px 0 rgba(197, 165, 90, 0.08);
+  border-bottom: 1px solid rgba(27, 42, 74, 0.06);
+}
+
+.shadow-3d:hover {
+  box-shadow:
+    0 2px 4px rgba(27, 42, 74, 0.06),
+    0 8px 16px rgba(27, 42, 74, 0.08),
+    0 16px 32px rgba(27, 42, 74, 0.06),
+    0 1px 0 rgba(197, 165, 90, 0.12);
+  transform: translateY(-1px);
+}
+
+/* Elevated 3D shadow (modals, dropdowns) */
+.shadow-3d-lg {
+  box-shadow:
+    0 2px 4px rgba(27, 42, 74, 0.05),
+    0 8px 16px rgba(27, 42, 74, 0.08),
+    0 16px 32px rgba(27, 42, 74, 0.08),
+    0 32px 64px rgba(27, 42, 74, 0.06),
+    0 1px 0 rgba(197, 165, 90, 0.1);
+}
+
+/* Input/form 3D shadow */
+.shadow-3d-input {
+  box-shadow:
+    inset 0 1px 2px rgba(27, 42, 74, 0.06),
+    0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.shadow-3d-input:focus-within {
+  box-shadow:
+    inset 0 1px 2px rgba(27, 42, 74, 0.04),
+    0 0 0 3px rgba(197, 165, 90, 0.15),
+    0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Button 3D shadow */
+.shadow-3d-btn {
+  box-shadow:
+    0 1px 2px rgba(27, 42, 74, 0.1),
+    0 2px 4px rgba(27, 42, 74, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.shadow-3d-btn:hover {
+  box-shadow:
+    0 2px 4px rgba(27, 42, 74, 0.12),
+    0 4px 8px rgba(27, 42, 74, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-0.5px);
+}
+
+.shadow-3d-btn:active {
+  box-shadow:
+    0 0 1px rgba(27, 42, 74, 0.1),
+    inset 0 1px 3px rgba(27, 42, 74, 0.12);
+  transform: translateY(0.5px);
+}
+
+/* Popover/Dropdown 3D shadow */
+.shadow-3d-popover {
+  box-shadow:
+    0 4px 8px rgba(27, 42, 74, 0.06),
+    0 12px 24px rgba(27, 42, 74, 0.1),
+    0 24px 48px rgba(27, 42, 74, 0.06),
+    0 0 0 1px rgba(27, 42, 74, 0.04);
+}
+
+/* Badge 3D shadow */
+.shadow-3d-badge {
+  box-shadow:
+    0 1px 2px rgba(27, 42, 74, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* Toast/Notification 3D shadow */
+.shadow-3d-toast {
+  box-shadow:
+    0 4px 12px rgba(27, 42, 74, 0.1),
+    0 16px 32px rgba(27, 42, 74, 0.08),
+    0 1px 0 rgba(197, 165, 90, 0.06);
+}
+
+/* Table row hover 3D effect */
+.shadow-3d-row:hover {
+  box-shadow:
+    0 2px 8px rgba(27, 42, 74, 0.06),
+    0 0 0 1px rgba(197, 165, 90, 0.08);
+  background: linear-gradient(to right,
+      rgba(197, 165, 90, 0.03),
+      rgba(197, 165, 90, 0.01));
+}
+
+/* Global 3D transition */
+[data-slot="card"],
+[data-slot="button"],
+[data-slot="badge"],
+[data-slot="dialog-content"],
+[data-slot="select-content"],
+[data-slot="dropdown-menu-content"],
+[data-slot="table-row"] {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
