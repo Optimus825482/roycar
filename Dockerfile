@@ -37,11 +37,9 @@ COPY --from=build /app/public ./public
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/prisma.config.ts ./prisma.config.ts
 COPY --from=build /app/src/generated ./src/generated
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=build /app/node_modules/prisma ./node_modules/prisma
 COPY --from=build /app/node_modules/dotenv ./node_modules/dotenv
-COPY --from=build /app/node_modules/tsx ./node_modules/tsx
 
 # Copy entrypoint and supervisor config
 COPY docker-entrypoint.sh /docker-entrypoint.sh
