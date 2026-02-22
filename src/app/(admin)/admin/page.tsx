@@ -175,7 +175,7 @@ export default function AdminDashboard() {
                       >
                         {STATUS_LABELS[status] || status}
                       </span>
-                      <Badge variant="secondary" className="text-lg font-bold min-w-[2rem] justify-center">{count}</Badge>
+                      <Badge variant="secondary" className="text-lg font-bold min-w-8 justify-center">{count}</Badge>
                     </div>
                   ))}
                 </div>
@@ -201,7 +201,7 @@ export default function AdminDashboard() {
                         <span className="text-sm font-medium text-mr-text-primary">
                           {d.departmentName}
                         </span>
-                        <Badge variant="secondary" className="text-base font-bold min-w-[2rem] justify-center">{d.count}</Badge>
+                        <Badge variant="secondary" className="text-base font-bold min-w-8 justify-center">{d.count}</Badge>
                       </div>
                     ))}
                   </div>

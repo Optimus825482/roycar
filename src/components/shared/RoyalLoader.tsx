@@ -64,7 +64,7 @@ function RoyalPulse({ size = "md" }: { size?: RoyalLoaderProps["size"] }) {
         <div className={cn("relative flex items-center justify-center", s.ring)}>
             <div className="absolute inset-0 rounded-full bg-mr-gold/20 animate-ping" />
             <div className="absolute inset-1 rounded-full bg-mr-navy/10 animate-pulse" />
-            <div className="relative w-3/5 h-3/5 rounded-full bg-gradient-to-br from-mr-navy to-mr-gold" />
+            <div className="relative w-3/5 h-3/5 rounded-full bg-linear-to-br from-mr-navy to-mr-gold" />
         </div>
     );
 }
@@ -74,7 +74,7 @@ export function RoyalSkeleton({ className }: { className?: string }) {
     return (
         <div
             className={cn(
-                "animate-pulse rounded-md bg-gradient-to-r from-slate-200 via-mr-gold/10 to-slate-200 bg-[length:200%_100%]",
+                "animate-pulse rounded-md bg-linear-to-r from-slate-200 via-mr-gold/10 to-slate-200 bg-size-[200%_100%]",
                 "animate-[shimmer_1.5s_ease-in-out_infinite]",
                 className
             )}

@@ -156,7 +156,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                 <ChevronDown className="w-4 h-4 text-mr-text-secondary" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[160px]">
+            <DropdownMenuContent align="end" className="min-w-40">
               <DropdownMenuItem
                 onClick={() => signOut({ callbackUrl: "/giris" })}
                 className="text-mr-error cursor-pointer gap-2"
