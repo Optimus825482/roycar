@@ -5,10 +5,9 @@ import { WizardContainer } from "@/components/application-form/WizardContainer";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 export default function ApplicationPage() {
   const [showWelcome, setShowWelcome] = useState(true);
@@ -19,27 +18,21 @@ export default function ApplicationPage() {
       <Dialog open={showWelcome} onOpenChange={setShowWelcome}>
         <DialogContent
           showCloseButton={false}
-          className="sm:max-w-md border-mr-gold/20 bg-mr-cream shadow-xl"
+          className="sm:max-w-md border-mr-gold/30 bg-linear-to-b from-[#1a1a2e] to-[#16213e] shadow-2xl"
         >
-          <DialogHeader className="items-center text-center">
-            <DialogDescription className="text-mr-text-primary text-sm tracking-widest uppercase font-medium">
-              En İyilerle Birlikte, Daha İyisi İçin.
-            </DialogDescription>
-            <DialogTitle className="font-(family-name:--font-handwriting) text-mr-gold text-3xl font-normal mt-1">
-              Hoşgeldiniz
-            </DialogTitle>
-          </DialogHeader>
-
+          <VisuallyHidden>
+            <DialogTitle>Hoşgeldiniz</DialogTitle>
+          </VisuallyHidden>
           <div className="my-2">
-            <div className="w-12 h-px bg-mr-gold/40 mx-auto" />
+            <div className="w-12 h-px bg-mr-gold/50 mx-auto" />
           </div>
 
-          <p className="text-mr-text-primary/90 text-sm leading-relaxed text-center px-2">
+          <p className="text-white/80 text-sm leading-relaxed text-center px-2">
             Merit Royal&apos;ın prestijini ve tecrübesini yaşamak, varlığınızla
             katkıda bulunmak üzere ilk adımı atmak üzeresiniz. Sizi aramızda
             görmeyi umut ediyoruz.
           </p>
-          <p className="text-mr-gold/80 text-xs text-center italic">
+          <p className="text-mr-gold/70 text-xs text-center italic">
             Umarız her şey istediğiniz gibi olur.
           </p>
 
@@ -53,15 +46,6 @@ export default function ApplicationPage() {
       </Dialog>
 
       {/* Sayfa İçeriği */}
-      <div className="text-center mb-8">
-        <p className="text-mr-text-secondary text-sm tracking-wide">
-          En İyilerle Birlikte, Daha İyisi İçin.
-        </p>
-        <p className="font-(family-name:--font-handwriting) text-mr-gold text-2xl mt-1">
-          Hoşgeldiniz
-        </p>
-      </div>
-
       <div className="bg-white rounded-xl shadow-sm border p-6 sm:p-8">
         <WizardContainer />
       </div>
