@@ -39,7 +39,7 @@ echo "DATABASE_URL=\"$DATABASE_URL\"" > /app/.env.local
 
 # ─── 5. Run Prisma migrations ───
 echo ">>> Running Prisma migrations..."
-npx prisma migrate deploy 2>&1 || echo "Migration warning (may already be applied)"
+node node_modules/prisma/build/index.js migrate deploy 2>&1 || echo "Migration warning (may already be applied)"
 
 # ─── 6. Run seed if tables are empty ───
 DEPT_COUNT=$(su postgres -c "psql -t -d $DB_NAME -c \"SELECT COUNT(*) FROM departments;\"" 2>/dev/null | tr -d ' ' || echo "0")
