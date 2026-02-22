@@ -24,9 +24,35 @@ const dancingScript = Dancing_Script({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://royalcareer.erkanerdem.net"),
   title: "Merit Royal Kariyer",
   description: "Merit Royal Hotels — Kariyer ve başvuru platformu",
-  icons: { icon: "/images/image.ico" },
+  icons: {
+    icon: "/images/image.ico",
+    apple: "/images/logo.png",
+  },
+  openGraph: {
+    title: "Merit Royal Kariyer",
+    description: "Merit Royal Hotels — Kariyer ve başvuru platformu",
+    url: "https://royalcareer.erkanerdem.net",
+    siteName: "Merit Royal Kariyer",
+    images: [
+      {
+        url: "/images/logo.png",
+        width: 512,
+        height: 512,
+        alt: "Merit Royal Hotels Logo",
+      },
+    ],
+    locale: "tr_TR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Merit Royal Kariyer",
+    description: "Merit Royal Hotels — Kariyer ve başvuru platformu",
+    images: ["/images/logo.png"],
+  },
 };
 
 export default function RootLayout({
