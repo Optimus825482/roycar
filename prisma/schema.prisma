@@ -1,0 +1,303 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Kimlik Doğrulama ───
+
+model AdminUser {
+  id           BigInt   @id @default(autoincrement())
+  username     String   @unique
+  email        String?
+  passwordHash String   @map("password_hash")
+  fullName     String   @map("full_name")
+  role         String   @default("hr_manager")
+  permissions  Json     @default("{\"form_builder\":true,\"ai_chat\":true,\"evaluations\":true,\"screening\":true,\"data_import\":true,\"settings\":false,\"user_management\":false}")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  chatSessions ChatSession[]
+
+  @@map("admin_users")
+}
+
+// ─── Departmanlar ───
+
+model Department {
+  id        BigInt   @id @default(autoincrement())
+  name      String   @unique
+  isActive  Boolean  @default(true) @map("is_active")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  applications Application[]
+  screeningCriteria ScreeningCriteria[]
+
+  @@map("departments")
+}
+
+model ScreeningCriteria {
+  id           BigInt   @id @default(autoincrement())
+  name         String
+  description  String?
+  departmentId BigInt?  @map("department_id")
+  formConfigId BigInt?  @map("form_config_id")
+  isActive     Boolean  @default(true) @map("is_active")
+  criteriaRules Json    @default("[]") @map("criteria_rules")
+  passThreshold Int     @default(60) @map("pass_threshold")
+  useAiAssist  Boolean  @default(false) @map("use_ai_assist")
+  aiPrompt     String?  @map("ai_prompt")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  department Department? @relation(fields: [departmentId], references: [id])
+  formConfig FormConfig? @relation(fields: [formConfigId], references: [id])
+  results    ScreeningResult[]
+
+  @@index([departmentId])
+  @@index([formConfigId])
+  @@index([isActive])
+  @@map("screening_criteria")
+}
+
+// ─── Ön Eleme Sonuçları ───
+
+model ScreeningResult {
+  id            BigInt   @id @default(autoincrement())
+  applicationId BigInt   @map("application_id")
+  criteriaId    BigInt   @map("criteria_id")
+  passed        Boolean
+  score         Int      @default(0)
+  details       Json     @default("{}")
+  screenedAt    DateTime @default(now()) @map("screened_at") @db.Timestamptz
+
+  application Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  criteria    ScreeningCriteria  @relation(fields: [criteriaId], references: [id])
+
+  @@unique([applicationId, criteriaId])
+  @@index([applicationId])
+  @@index([criteriaId])
+  @@map("screening_results")
+}
+
+
+// ─── Form Yapılandırması ───
+
+model FormConfig {
+  id          BigInt   @id @default(autoincrement())
+  title       String
+  mode        String   @default("static")
+  isPublished Boolean  @default(false) @map("is_published")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  questions    Question[]
+  applications Application[]
+  screeningCriteria ScreeningCriteria[]
+
+  @@map("form_configs")
+}
+
+// ─── Soru Tanımları ───
+
+model Question {
+  id           BigInt   @id @default(autoincrement())
+  formConfigId BigInt   @map("form_config_id")
+  groupLabel   String?  @map("group_label")
+  questionText String   @map("question_text")
+  questionType String   @map("question_type")
+  isRequired   Boolean  @default(true) @map("is_required")
+  sortOrder    Int      @map("sort_order")
+  options      Json?
+  validation   Json?
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  formConfig      FormConfig           @relation(fields: [formConfigId], references: [id], onDelete: Cascade)
+  images          QuestionImage[]
+  branchingRules  BranchingRule[]      @relation("SourceQuestion")
+  targetedByRules BranchingRule[]      @relation("TargetQuestion")
+  responses       ApplicationResponse[]
+
+  @@index([formConfigId, sortOrder])
+  @@map("questions")
+}
+
+// ─── Soru Görselleri ───
+
+model QuestionImage {
+  id         BigInt   @id @default(autoincrement())
+  questionId BigInt   @map("question_id")
+  filePath   String   @map("file_path")
+  fileName   String   @map("file_name")
+  mimeType   String   @map("mime_type")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+  @@map("question_images")
+}
+
+// ─── Koşullu Dallanma Kuralları ───
+
+model BranchingRule {
+  id               BigInt   @id @default(autoincrement())
+  sourceQuestionId BigInt   @map("source_question_id")
+  targetQuestionId BigInt   @map("target_question_id")
+  conditionLogic   String   @default("AND") @map("condition_logic")
+  conditions       Json
+  priority         Int      @default(0)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  sourceQuestion Question @relation("SourceQuestion", fields: [sourceQuestionId], references: [id], onDelete: Cascade)
+  targetQuestion Question @relation("TargetQuestion", fields: [targetQuestionId], references: [id], onDelete: Cascade)
+
+  @@index([sourceQuestionId])
+  @@index([targetQuestionId])
+  @@map("branching_rules")
+}
+
+
+// ─── Başvurular ───
+
+model Application {
+  id              BigInt   @id @default(autoincrement())
+  applicationNo   String   @unique @map("application_no")
+  formConfigId    BigInt   @map("form_config_id")
+  departmentId    BigInt   @map("department_id")
+  fullName        String   @map("full_name")
+  email           String
+  phone           String
+  photoPath       String?  @map("photo_path")
+  status          String   @default("new")
+  submittedAt     DateTime @default(now()) @map("submitted_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  responseSummary Json?    @map("response_summary")
+  importLogId     BigInt?  @map("import_log_id")
+
+  formConfig FormConfig           @relation(fields: [formConfigId], references: [id])
+  department Department           @relation(fields: [departmentId], references: [id])
+  responses  ApplicationResponse[]
+  evaluation Evaluation?
+  importLog  ImportLog?           @relation(fields: [importLogId], references: [id])
+  screeningResults ScreeningResult[]
+
+  @@index([email, departmentId])
+  @@index([status])
+  @@index([departmentId])
+  @@index([submittedAt])
+  @@map("applications")
+}
+
+// ─── Başvuru Yanıtları ───
+
+model ApplicationResponse {
+  id            BigInt   @id @default(autoincrement())
+  applicationId BigInt   @map("application_id")
+  questionId    BigInt   @map("question_id")
+  answerText    String?  @map("answer_text")
+  answerJson    Json?    @map("answer_json")
+  answerFile    String?  @map("answer_file")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  question    Question    @relation(fields: [questionId], references: [id])
+
+  @@unique([applicationId, questionId])
+  @@index([applicationId])
+  @@index([questionId])
+  @@map("application_responses")
+}
+
+// ─── AI Değerlendirme ───
+
+model Evaluation {
+  id            BigInt    @id @default(autoincrement())
+  applicationId BigInt    @unique @map("application_id")
+  overallScore  Int       @map("overall_score")
+  status        String    @default("pending")
+  report        Json
+  rawResponse   String?   @map("raw_response")
+  retryCount    Int       @default(0) @map("retry_count")
+  evaluatedAt   DateTime? @map("evaluated_at") @db.Timestamptz
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([overallScore])
+  @@map("evaluations")
+}
+
+// ─── AI Sohbet ───
+
+model ChatSession {
+  id             BigInt   @id @default(autoincrement())
+  adminUserId    BigInt   @map("admin_user_id")
+  title          String?
+  isArchived     Boolean  @default(false) @map("is_archived")
+  contextSummary String?  @map("context_summary")
+  summaryUpTo    Int      @default(0) @map("summary_up_to")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  adminUser AdminUser     @relation(fields: [adminUserId], references: [id])
+  messages  ChatMessage[]
+
+  @@index([adminUserId])
+  @@index([isArchived])
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id            BigInt   @id @default(autoincrement())
+  chatSessionId BigInt   @map("chat_session_id")
+  role          String
+  content       String
+  metadata      Json?
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  chatSession ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+
+  @@index([chatSessionId])
+  @@map("chat_messages")
+}
+
+// ─── Sistem Ayarları ───
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("system_settings")
+}
+
+// ─── Veri Aktarımı ───
+
+model ImportLog {
+  id            BigInt    @id @default(autoincrement())
+  fileName      String    @map("file_name")
+  totalRows     Int       @map("total_rows")
+  importedCount Int       @map("imported_count")
+  skippedCount  Int       @map("skipped_count")
+  errorDetails  Json?     @map("error_details")
+  status        String    @default("processing")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  completedAt   DateTime? @map("completed_at") @db.Timestamptz
+
+  applications Application[]
+
+  @@map("import_logs")
+}

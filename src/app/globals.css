@@ -1,26 +1,157 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
+@custom-variant dark (&:is(.dark *));
+
+/* ─── Merit Royal Design Tokens ─── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Merit Royal Ana Renkler */
+  --mr-gold: #c5a55a;
+  --mr-gold-light: #d4ba7a;
+  --mr-gold-dark: #a68a3e;
+  --mr-navy: #1b2a4a;
+  --mr-navy-light: #2a3d66;
+  --mr-navy-dark: #111d35;
+  --mr-white: #ffffff;
+  --mr-cream: #faf8f5;
+
+  /* Semantik Renkler */
+  --mr-success: #2d8a56;
+  --mr-warning: #d4a017;
+  --mr-error: #c0392b;
+  --mr-info: #2980b9;
+
+  /* Metin */
+  --mr-text-primary: #1b2a4a;
+  --mr-text-secondary: #5a6b8a;
+  --mr-text-muted: #8a95aa;
+
+  /* Arka Plan */
+  --mr-bg-primary: #ffffff;
+  --mr-bg-secondary: #f5f3ef;
+  --mr-bg-admin: #f8f9fc;
+
+  /* Tipografi */
+  --mr-font-heading: var(--font-playfair);
+  --mr-font-body: var(--font-inter);
+
+  /* shadcn/ui — Merit Royal Tema */
+  --radius: 0.5rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.22 0.04 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.04 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.04 260);
+
+  /* Primary = Navy */
+  --primary: oklch(0.25 0.05 260);
+  --primary-foreground: oklch(0.98 0 0);
+  /* Secondary = Gold */
+  --secondary: oklch(0.73 0.1 80);
+  --secondary-foreground: oklch(0.22 0.04 260);
+  --muted: oklch(0.96 0.005 80);
+  --muted-foreground: oklch(0.48 0.02 260);
+  /* Accent = Gold Light */
+  --accent: oklch(0.82 0.08 80);
+  --accent-foreground: oklch(0.22 0.04 260);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.9 0.01 80);
+  --input: oklch(0.9 0.01 80);
+  --ring: oklch(0.73 0.1 80);
+  --chart-1: oklch(0.25 0.05 260);
+  --chart-2: oklch(0.73 0.1 80);
+  --chart-3: oklch(0.55 0.15 160);
+  --chart-4: oklch(0.75 0.12 50);
+  --chart-5: oklch(0.5 0.18 270);
+  --sidebar: oklch(0.22 0.04 260);
+  --sidebar-foreground: oklch(0.95 0.005 80);
+  --sidebar-primary: oklch(0.73 0.1 80);
+  --sidebar-primary-foreground: oklch(0.22 0.04 260);
+  --sidebar-accent: oklch(0.3 0.05 260);
+  --sidebar-accent-foreground: oklch(0.95 0.005 80);
+  --sidebar-border: oklch(0.35 0.04 260);
+  --sidebar-ring: oklch(0.73 0.1 80);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-mr-gold: #c5a55a;
+  --color-mr-gold-light: #d4ba7a;
+  --color-mr-gold-dark: #a68a3e;
+  --color-mr-navy: #1b2a4a;
+  --color-mr-navy-light: #2a3d66;
+  --color-mr-navy-dark: #111d35;
+  --color-mr-cream: #faf8f5;
+  --color-mr-success: #2d8a56;
+  --color-mr-warning: #d4a017;
+  --color-mr-error: #c0392b;
+  --color-mr-info: #2980b9;
+  --color-mr-text-primary: #1b2a4a;
+  --color-mr-text-secondary: #5a6b8a;
+  --color-mr-text-muted: #8a95aa;
+  --color-mr-bg-secondary: #f5f3ef;
+  --color-mr-bg-admin: #f8f9fc;
+  --font-heading: var(--font-playfair);
+  --font-body: var(--font-inter);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--mr-font-body), "Inter", sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--mr-font-heading), "Playfair Display", serif;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
