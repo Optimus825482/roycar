@@ -15,17 +15,25 @@ RUN npx prisma generate && npm run build
 # ─── Stage 3: Production (Node + PostgreSQL in same container) ───
 FROM node:20-alpine AS production
 
-# Install PostgreSQL and supervisor
+# Install PostgreSQL and supervisor, then build pgvector from source
 RUN apk add --no-cache \
-    postgresql16 \
-    postgresql16-contrib \
-  postgresql16-pgvector \
-    supervisor \
-    curl \
-    && mkdir -p /var/lib/postgresql/data \
-    && mkdir -p /run/postgresql \
-    && mkdir -p /var/log/supervisor \
-    && chown -R postgres:postgres /var/lib/postgresql /run/postgresql /var/log/supervisor
+  postgresql16 \
+  postgresql16-contrib \
+  supervisor \
+  curl \
+  && apk add --no-cache --virtual .build-deps \
+  build-base \
+  git \
+  postgresql16-dev \
+  && git clone --depth 1 --branch v0.8.0 https://github.com/pgvector/pgvector.git /tmp/pgvector \
+  && make -C /tmp/pgvector PG_CONFIG=/usr/lib/postgresql16/bin/pg_config \
+  && make -C /tmp/pgvector PG_CONFIG=/usr/lib/postgresql16/bin/pg_config install \
+  && apk del .build-deps \
+  && rm -rf /tmp/pgvector \
+  && mkdir -p /var/lib/postgresql/data \
+  && mkdir -p /run/postgresql \
+  && mkdir -p /var/log/supervisor \
+  && chown -R postgres:postgres /var/lib/postgresql /run/postgresql /var/log/supervisor
 
 WORKDIR /app
 
