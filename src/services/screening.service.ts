@@ -297,7 +297,9 @@ export async function evaluateScreening(
   if (criteria.useAiAssist) {
     const candidateText = formatCandidateForScreening(
       application,
-      application.department.name,
+      application.department?.name ||
+        application.positionTitle ||
+        "Belirtilmemiş",
       questionMap,
     );
 

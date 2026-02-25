@@ -20,13 +20,13 @@ function shareEmailHTML(data: { formTitle: string; formUrl: string }): string {
 <body style="margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif;background:#f8f9fc;">
   <div style="max-width:600px;margin:0 auto;background:#ffffff;">
     <div style="background:#1B2A4A;padding:24px;text-align:center;">
-      <h1 style="color:#C5A55A;margin:0;font-size:24px;">Merit Royal Hotels</h1>
+      <h1 style="color:#C5A55A;margin:0;font-size:24px;">F&B Career System</h1>
       <p style="color:#ffffff;margin:4px 0 0;font-size:13px;">Kariyer</p>
     </div>
     <div style="padding:32px 24px;">
       <h2 style="color:#1B2A4A;margin:0 0 16px;font-size:20px;">Kariyer Fırsatı</h2>
       <p style="color:#5a6b8a;line-height:1.6;">
-        Merit Royal Hotels ekibine katılmak ister misiniz?<br><br>
+        F&B Career System ekibine katılmak ister misiniz?<br><br>
         <strong>${data.formTitle}</strong> için başvuru sürecimiz başlamıştır.
       </p>
       <div style="text-align:center;margin:32px 0;">
@@ -41,8 +41,8 @@ function shareEmailHTML(data: { formTitle: string; formUrl: string }): string {
     </div>
     <div style="background:#f5f3ef;padding:16px 24px;text-align:center;">
       <p style="color:#8a95aa;font-size:12px;margin:0;">
-        © ${new Date().getFullYear()} Merit Royal Hotels — Kuzey Kıbrıs<br>
-        Bu e-posta Merit Royal Kariyer tarafından gönderilmiştir.
+        © ${new Date().getFullYear()} F&B Career System — Kuzey Kıbrıs<br>
+        Bu e-posta F&B Career System tarafından gönderilmiştir.
       </p>
     </div>
   </div>
@@ -75,9 +75,9 @@ export async function POST(req: NextRequest) {
     for (const email of emails) {
       try {
         await transporter.sendMail({
-          from: `"Merit Royal Kariyer" <${process.env.SMTP_USER}>`,
+          from: `"F&B Career System" <${process.env.SMTP_USER}>`,
           to: email.trim(),
-          subject: `Merit Royal Kariyer — ${formTitle}`,
+          subject: `F&B Career System — ${formTitle}`,
           html: shareEmailHTML({ formTitle, formUrl }),
         });
         results.push({ email, success: true });

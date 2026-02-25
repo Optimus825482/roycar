@@ -97,6 +97,23 @@ export function QuestionEditor({
       toast.error("Soru metni gerekli.");
       return;
     }
+
+    // Ad, e-posta, telefon soruları engelle — bunlar başvuru formunda otomatik alınıyor
+    const blockedPatterns = [
+      /\b(ad\s*soyad|adınız|isim|isminiz|full\s*name|name)\b/i,
+      /\b(e-?posta|email|mail\s*adres)/i,
+      /\b(telefon|phone|cep\s*tel|gsm)/i,
+    ];
+    const qLower = questionText.trim();
+    const isBlocked = blockedPatterns.some((p) => p.test(qLower));
+    if (isBlocked) {
+      toast.error(
+        "Ad, e-posta ve telefon bilgileri başvuru formunda otomatik olarak alınmaktadır. Bu bilgileri soru olarak eklemenize gerek yoktur.",
+        { duration: 5000 },
+      );
+      return;
+    }
+
     if (hasOptions) {
       const validOpts = options.filter((o) => o.trim());
       if (validOpts.length < 2) {

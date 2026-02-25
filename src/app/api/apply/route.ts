@@ -11,6 +11,8 @@ export async function POST(req: NextRequest) {
     const {
       formConfigId,
       departmentId,
+      positionId,
+      positionTitle,
       fullName,
       email,
       phone,
@@ -19,9 +21,9 @@ export async function POST(req: NextRequest) {
     } = body;
 
     // Validasyon
-    if (!formConfigId || !departmentId || !fullName || !email || !phone) {
+    if (!formConfigId || !fullName || !email || !phone) {
       return apiError(
-        "Zorunlu alanlar eksik: formConfigId, departmentId, fullName, email, phone",
+        "Zorunlu alanlar eksik: formConfigId, fullName, email, phone",
       );
     }
 
@@ -103,7 +105,9 @@ export async function POST(req: NextRequest) {
         data: {
           applicationNo,
           formConfigId: BigInt(formConfigId),
-          departmentId: BigInt(departmentId),
+          departmentId: departmentId ? BigInt(departmentId) : null,
+          positionId: positionId ? BigInt(positionId) : null,
+          positionTitle: positionTitle || null,
           fullName: fullName.trim(),
           email: email.toLowerCase().trim(),
           phone: phone.trim(),
@@ -150,15 +154,21 @@ export async function POST(req: NextRequest) {
     // Asenkron AI değerlendirmesi başlat (fire-and-forget)
     triggerEvaluation(application.id);
 
-    // Departman adını al ve onay e-postası gönder (fire-and-forget)
-    const dept = await prisma.department.findUnique({
-      where: { id: BigInt(departmentId) },
-    });
+    // Onay e-postası gönder (fire-and-forget)
+    let deptName = "Belirtilmemiş";
+    if (departmentId) {
+      const dept = await prisma.department.findUnique({
+        where: { id: BigInt(departmentId) },
+      });
+      deptName = dept?.name || "Belirtilmemiş";
+    } else if (positionTitle) {
+      deptName = positionTitle;
+    }
     sendApplicationConfirmation({
       email: email.toLowerCase().trim(),
       fullName: fullName.trim(),
       applicationNo,
-      departmentName: dept?.name || "Belirtilmemiş",
+      departmentName: deptName,
     }).catch((err) => console.error("E-posta gönderme hatası:", err));
 
     return Response.json(

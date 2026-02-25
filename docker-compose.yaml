@@ -3,17 +3,17 @@ version: "3.9"
 services:
   db:
     image: pgvector/pgvector:pg16
-    container_name: merit-royal-db
+    container_name: fb-career-db
     ports:
       - "15432:5432"
     environment:
-      POSTGRES_DB: royal_careerdb
+      POSTGRES_DB: fb_careerdb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d royal_careerdb"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fb_careerdb"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -23,7 +23,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: merit-royal-app
+    container_name: fb-career-app
     depends_on:
       db:
         condition: service_healthy
@@ -35,10 +35,10 @@ services:
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-me-to-a-secure-random-string}
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: royal_careerdb
+      DB_NAME: fb_careerdb
       DB_USER: postgres
       DB_PASSWORD: postgres
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/royal_careerdb
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/fb_careerdb
     expose:
       - "3000"
     healthcheck:

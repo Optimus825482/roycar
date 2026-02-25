@@ -28,7 +28,7 @@ function applicationConfirmationHTML(data: {
   <div style="max-width:600px;margin:0 auto;background:#ffffff;">
     <!-- Header -->
     <div style="background:#1B2A4A;padding:24px;text-align:center;">
-      <h1 style="color:#C5A55A;margin:0;font-size:24px;">Merit Royal Hotels</h1>
+      <h1 style="color:#C5A55A;margin:0;font-size:24px;">F&B Career System</h1>
       <p style="color:#ffffff;margin:4px 0 0;font-size:13px;">Kariyer</p>
     </div>
     <!-- Content -->
@@ -63,7 +63,7 @@ function applicationConfirmationHTML(data: {
     <!-- Footer -->
     <div style="background:#f5f3ef;padding:16px 24px;text-align:center;">
       <p style="color:#8a95aa;font-size:12px;margin:0;">
-        © ${new Date().getFullYear()} Merit Royal Hotels — Kuzey Kıbrıs<br>
+        © ${new Date().getFullYear()} F&B Career System — Kuzey Kıbrıs<br>
         Bu e-posta otomatik olarak gönderilmiştir.
       </p>
     </div>
@@ -86,7 +86,7 @@ export async function sendApplicationConfirmation(data: {
 
   try {
     await transporter.sendMail({
-      from: `"Merit Royal Kariyer" <${process.env.SMTP_USER}>`,
+      from: `"F&B Career System" <${process.env.SMTP_USER}>`,
       to: data.email,
       subject: `Başvurunuz Alındı — ${data.applicationNo}`,
       html: applicationConfirmationHTML({
@@ -112,28 +112,28 @@ const STATUS_NOTIFICATION_CONFIG: Record<
   { subject: string; heading: string; accentColor: string; message: string }
 > = {
   shortlisted: {
-    subject: "Başvurunuz Ön Elemeyi Geçti — Merit Royal Hotels",
+    subject: "Başvurunuz Ön Elemeyi Geçti — F&B Career System",
     heading: "Ön Elemeyi Geçtiniz! 🎉",
     accentColor: "#22C55E",
     message:
       "Başvurunuz detaylı incelemeye alınmış ve ön eleme sürecini başarıyla geçmiştir. İnsan Kaynakları ekibimiz en kısa sürede sizinle iletişime geçerek sonraki adımlar hakkında bilgi verecektir.",
   },
   rejected: {
-    subject: "Merit Royal Hotels — Başvurunuza İlişkin Bilgilendirme",
+    subject: "F&B Career System — Başvurunuza İlişkin Bilgilendirme",
     heading: "Başvurunuza İlişkin Bilgilendirme",
     accentColor: "#6B7280",
     message:
       "Başvurunuzu titizlikle değerlendirmiş olmamıza karşın, şu an için bu pozisyon gereksinimlerimizi karşılamaya yönelik farklı bir profil tercih edilmiştir. İlginiz ve güveniniz için teşekkür eder, ilerleyen dönemde açılacak başka pozisyonlar için tekrar başvurmanızı bekleriz.",
   },
   hired: {
-    subject: "Tebrikler — Merit Royal Hotels İşe Alım Bildirimi",
+    subject: "Tebrikler — F&B Career System İşe Alım Bildirimi",
     heading: "Tebrikler, İşe Alındınız! 🌟",
     accentColor: "#C5A55A",
     message:
-      "Başvurunuz değerlendirilmiş ve sizi Merit Royal Hotels ailesine katmaktan büyük mutluluk duyacağımıza karar verilmiştir. İşe başlama sürecinizle ilgili detaylar için en kısa sürede sizinle iletişime geçilecektir. Evrakları hazır bulundurunuz.",
+      "Başvurunuz değerlendirilmiş ve sizi F&B Career System ailesine katmaktan büyük mutluluk duyacağımıza karar verilmiştir. İşe başlama sürecinizle ilgili detaylar için en kısa sürede sizinle iletişime geçilecektir. Evrakları hazır bulundurunuz.",
   },
   evaluated: {
-    subject: "Başvurunuz Değerlendirildi — Merit Royal Hotels",
+    subject: "Başvurunuz Değerlendirildi — F&B Career System",
     heading: "Başvurunuz İncelendi",
     accentColor: "#1B2A4A",
     message:
@@ -155,7 +155,7 @@ function statusNotificationHTML(data: {
 <body style="margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif;background:#f8f9fc;">
   <div style="max-width:600px;margin:0 auto;background:#ffffff;">
     <div style="background:#1B2A4A;padding:24px;text-align:center;">
-      <h1 style="color:#C5A55A;margin:0;font-size:24px;">Merit Royal Hotels</h1>
+      <h1 style="color:#C5A55A;margin:0;font-size:24px;">F&B Career System</h1>
       <p style="color:#ffffff;margin:4px 0 0;font-size:13px;">Kariyer</p>
     </div>
     <div style="padding:32px 24px;">
@@ -181,12 +181,12 @@ function statusNotificationHTML(data: {
         </table>
       </div>
       <p style="color:#8a95aa;font-size:13px;line-height:1.6;">
-        Sorularınız için <a href="mailto:${process.env.SMTP_USER || "kariyer@meritroyal.com"}" style="color:#C5A55A;">kariyer ekibimizle</a> iletişime geçebilirsiniz.
+        Sorularınız için <a href="mailto:${process.env.SMTP_USER || "kariyer@fbcareersystem.com"}" style="color:#C5A55A;">kariyer ekibimizle</a> iletişime geçebilirsiniz.
       </p>
     </div>
     <div style="background:#f5f3ef;padding:16px 24px;text-align:center;">
       <p style="color:#8a95aa;font-size:12px;margin:0;">
-        © ${new Date().getFullYear()} Merit Royal Hotels — Kuzey Kıbrıs<br>
+        © ${new Date().getFullYear()} F&B Career System — Kuzey Kıbrıs<br>
         Bu e-posta otomatik olarak gönderilmiştir.
       </p>
     </div>
@@ -203,14 +203,17 @@ export async function sendStatusChangeEmail(data: {
   status: NotifiableStatus;
 }): Promise<void> {
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.log("SMTP yapılandırılmamış, durum bildirimi gönderilmedi:", data.email);
+    console.log(
+      "SMTP yapılandırılmamış, durum bildirimi gönderilmedi:",
+      data.email,
+    );
     return;
   }
 
   const cfg = STATUS_NOTIFICATION_CONFIG[data.status];
   try {
     await transporter.sendMail({
-      from: `"Merit Royal Kariyer" <${process.env.SMTP_USER}>`,
+      from: `"F&B Career System" <${process.env.SMTP_USER}>`,
       to: data.email,
       subject: cfg.subject,
       html: statusNotificationHTML({

@@ -16,7 +16,7 @@ model AdminUser {
   passwordHash String   @map("password_hash")
   fullName     String   @map("full_name")
   role         String   @default("hr_manager")
-  permissions  Json     @default("{\"form_builder\":true,\"ai_chat\":true,\"evaluations\":true,\"screening\":true,\"data_import\":true,\"settings\":false,\"user_management\":false}")
+  permissions  Json     @default("{\"form_builder\":true,\"ai_chat\":true,\"evaluations\":true,\"screening\":true,\"data_import\":true,\"import_delete\":false,\"settings\":false,\"user_management\":false}")
   isActive     Boolean  @default(true) @map("is_active")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
@@ -173,7 +173,9 @@ model Application {
   id              BigInt   @id @default(autoincrement())
   applicationNo   String   @unique @map("application_no")
   formConfigId    BigInt   @map("form_config_id")
-  departmentId    BigInt   @map("department_id")
+  departmentId    BigInt?  @map("department_id")
+  positionId      BigInt?  @map("position_id")
+  positionTitle   String?  @map("position_title")
   fullName        String   @map("full_name")
   email           String
   phone           String
@@ -185,16 +187,18 @@ model Application {
   importLogId     BigInt?  @map("import_log_id")
 
   formConfig   FormConfig           @relation(fields: [formConfigId], references: [id])
-  department   Department           @relation(fields: [departmentId], references: [id])
+  department   Department?          @relation(fields: [departmentId], references: [id])
   responses    ApplicationResponse[]
-  evaluation   Evaluation?
+  evaluations  Evaluation[]
   importLog    ImportLog?           @relation(fields: [importLogId], references: [id])
   screeningResults ScreeningResult[]
   fieldValues  ApplicationFieldValue[]
+  groupMembers CandidateGroupMember[]
 
   @@index([email, departmentId])
   @@index([status])
   @@index([departmentId])
+  @@index([positionId])
   @@index([submittedAt])
   @@map("applications")
 }
@@ -257,25 +261,84 @@ model ApplicationResponse {
   @@map("application_responses")
 }
 
+// ─── Değerlendirme Oturumları ───
+
+model EvaluationSession {
+  id          BigInt   @id @default(autoincrement())
+  label       String?
+  description String?
+  criteria    Json     @default("[]")
+  status      String   @default("active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  evaluations  Evaluation[]
+  groupMembers CandidateGroupMember[]
+
+  @@map("evaluation_sessions")
+}
+
 // ─── AI Değerlendirme ───
 
 model Evaluation {
-  id            BigInt    @id @default(autoincrement())
-  applicationId BigInt    @unique @map("application_id")
-  overallScore  Int       @map("overall_score")
-  status        String    @default("pending")
-  report        Json
-  rawResponse   String?   @map("raw_response")
-  retryCount    Int       @default(0) @map("retry_count")
-  evaluatedAt   DateTime? @map("evaluated_at") @db.Timestamptz
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  id              BigInt    @id @default(autoincrement())
+  applicationId   BigInt    @map("application_id")
+  sessionId       BigInt?   @map("session_id")
+  overallScore    Int       @map("overall_score")
+  status          String    @default("pending")
+  report          Json
+  rawResponse     String?   @map("raw_response")
+  retryCount      Int       @default(0) @map("retry_count")
+  customCriteria  Json?     @map("custom_criteria")
+  evaluationLabel String?   @map("evaluation_label")
+  evaluatedAt     DateTime? @map("evaluated_at") @db.Timestamptz
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  application Application        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  session     EvaluationSession?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  groupMembers CandidateGroupMember[]
 
+  @@index([applicationId])
+  @@index([sessionId])
   @@index([status])
   @@index([overallScore])
   @@map("evaluations")
+}
+
+// ─── Aday Grupları ───
+
+model CandidateGroup {
+  id          BigInt   @id @default(autoincrement())
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  members CandidateGroupMember[]
+
+  @@map("candidate_groups")
+}
+
+model CandidateGroupMember {
+  id                  BigInt   @id @default(autoincrement())
+  groupId             BigInt   @map("group_id")
+  applicationId       BigInt   @map("application_id")
+  evaluationSessionId BigInt?  @map("evaluation_session_id")
+  evaluationId        BigInt?  @map("evaluation_id")
+  notes               String?
+  addedAt             DateTime @default(now()) @map("added_at") @db.Timestamptz
+
+  group             CandidateGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  application       Application        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  evaluationSession EvaluationSession? @relation(fields: [evaluationSessionId], references: [id], onDelete: SetNull)
+  evaluation        Evaluation?        @relation(fields: [evaluationId], references: [id], onDelete: SetNull)
+
+  @@unique([groupId, applicationId])
+  @@index([groupId])
+  @@index([applicationId])
+  @@index([evaluationSessionId])
+  @@map("candidate_group_members")
 }
 
 // ─── AI Sohbet ───
@@ -338,4 +401,33 @@ model ImportLog {
   applications Application[]
 
   @@map("import_logs")
+}
+
+
+// ─── Organizasyon Şeması ───
+
+model OrgPosition {
+  id                BigInt   @id @default(autoincrement())
+  title             String
+  titleEn           String?  @map("title_en")
+  description       String?
+  category          String   @default("kitchen") // kitchen, service, bar, banquet, room_service, hygiene, management
+  level             Int      @default(3) // 1=stratejik, 2=operasyonel, 3=icra
+  parentId          BigInt?  @map("parent_id")
+  authorityScore    Int      @default(0) @map("authority_score") // 0-100
+  guestInteraction  Int      @default(0) @map("guest_interaction") // 0-100
+  teamSize          Int      @default(1) @map("team_size")
+  skills            Json?    // { management: 0-100, technical: 0-100, social: 0-100, physical: 0-100, crisis: 0-100 }
+  sortOrder         Int      @default(0) @map("sort_order")
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  parent   OrgPosition?  @relation("OrgHierarchy", fields: [parentId], references: [id])
+  children OrgPosition[] @relation("OrgHierarchy")
+
+  @@index([category])
+  @@index([parentId])
+  @@index([level])
+  @@map("org_positions")
 }

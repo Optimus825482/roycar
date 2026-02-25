@@ -60,10 +60,13 @@ function LoginForm() {
       <div className="hidden lg:flex lg:w-1/2 bg-mr-navy relative overflow-hidden items-center justify-center">
         {/* Subtle pattern overlay */}
         <div className="absolute inset-0 opacity-5">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `radial-gradient(circle at 25% 25%, rgba(197,165,90,0.3) 0%, transparent 50%),
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `radial-gradient(circle at 25% 25%, rgba(197,165,90,0.3) 0%, transparent 50%),
                               radial-gradient(circle at 75% 75%, rgba(197,165,90,0.2) 0%, transparent 50%)`,
-          }} />
+            }}
+          />
         </div>
 
         {/* Decorative line accents */}
@@ -72,13 +75,16 @@ function LoginForm() {
 
         <div className="relative z-10 text-center px-12 max-w-lg">
           <Image
-            src="/images/logo_NOBG.PNG"
-            alt="Merit Royal Hotels"
-            width={280}
-            height={93}
-            className="mx-auto mb-8"
+            src="/images/logo.png"
+            alt="F&B Career System"
+            width={160}
+            height={160}
+            className="mx-auto mb-4 rounded-2xl"
             priority
           />
+          <h2 className="text-xl font-bold tracking-widest text-white/90 uppercase mb-8">
+            F&B Career System
+          </h2>
           <div className="w-16 h-px bg-mr-gold mx-auto mb-6" />
           <p className="text-white/80 text-lg leading-relaxed font-light">
             En İyilerle Birlikte, Daha İyisi İçin.
@@ -95,13 +101,16 @@ function LoginForm() {
           {/* Mobile-only logo */}
           <div className="flex justify-center mb-8 lg:hidden">
             <Image
-              src="/images/logo_NOBG.PNG"
-              alt="Merit Royal Hotels"
-              width={200}
-              height={66}
-              className="brightness-0"
+              src="/images/logo.png"
+              alt="F&B Career System"
+              width={60}
+              height={60}
+              className="rounded-lg"
               priority
             />
+            <h2 className="text-base font-semibold tracking-wide text-mr-navy mt-2">
+              F&B Career System
+            </h2>
           </div>
 
           <Card className="border-mr-gold/15 shadow-3d">
@@ -123,7 +132,10 @@ function LoginForm() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="username" className="text-sm font-medium text-mr-navy">
+                  <Label
+                    htmlFor="username"
+                    className="text-sm font-medium text-mr-navy"
+                  >
                     Kullanıcı Adı
                   </Label>
                   <Input
@@ -139,7 +151,10 @@ function LoginForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium text-mr-navy">
+                  <Label
+                    htmlFor="password"
+                    className="text-sm font-medium text-mr-navy"
+                  >
                     Parola
                   </Label>
                   <div className="relative">
@@ -157,7 +172,9 @@ function LoginForm() {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-mr-text-secondary hover:text-mr-navy cursor-pointer transition-colors"
-                      aria-label={showPassword ? "Parolayı gizle" : "Parolayı göster"}
+                      aria-label={
+                        showPassword ? "Parolayı gizle" : "Parolayı göster"
+                      }
                     >
                       {showPassword ? (
                         <EyeOff className="w-4.5 h-4.5" />
@@ -190,7 +207,10 @@ function LoginForm() {
           </Card>
 
           <footer className="mt-6 text-center text-mr-text-muted/50 text-xs">
-            <p>© {new Date().getFullYear()} Merit Royal Hotels — Tüm hakları saklıdır.</p>
+            <p>
+              © {new Date().getFullYear()} F&B Career System — Tüm hakları
+              saklıdır.
+            </p>
           </footer>
         </div>
       </div>

@@ -29,7 +29,7 @@ export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
   return result;
 }
 
-// ─── Merit Royal Utility Functions ───
+// ─── F&B Career System Utility Functions ───
 
 export function generateApplicationNo(): string {
   const year = new Date().getFullYear();

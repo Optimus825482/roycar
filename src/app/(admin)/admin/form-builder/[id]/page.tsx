@@ -11,6 +11,7 @@ import { QuestionEditor } from "@/components/admin/form-builder/QuestionEditor";
 import { BranchingRuleEditor } from "@/components/admin/form-builder/BranchingRuleEditor";
 import { FormModeToggle } from "@/components/admin/form-builder/FormModeToggle";
 import { FlowPreview } from "@/components/admin/form-builder/FlowPreview";
+import { FormAiAssistant } from "@/components/admin/form-builder/FormAiAssistant";
 import {
   DndContext,
   closestCenter,
@@ -343,6 +344,15 @@ export default function FormEditorPage() {
         questions={form.questions}
         rules={form.branchingRules || []}
         mode={form.mode as "static" | "dynamic"}
+      />
+
+      {/* AI Assistant Panel */}
+      <FormAiAssistant
+        formId={formId}
+        formTitle={title}
+        formMode={form.mode as "static" | "dynamic"}
+        questions={form.questions}
+        rules={form.branchingRules || []}
       />
     </div>
   );

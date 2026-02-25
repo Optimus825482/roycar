@@ -5,8 +5,18 @@ import { toast as toastNotify } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RoyalLoader } from "@/components/shared/RoyalLoader";
-import { Bot, Mic, MessageSquare, Users, Key, Lightbulb, ClipboardList, Check, Volume2 } from "lucide-react";
+import { AppLoader } from "@/components/shared/AppLoader";
+import {
+  Bot,
+  Mic,
+  MessageSquare,
+  Users,
+  Key,
+  Lightbulb,
+  ClipboardList,
+  Check,
+  Volume2,
+} from "lucide-react";
 
 interface ProviderInfo {
   key: string;
@@ -30,6 +40,7 @@ interface UserPermissions {
   evaluations: boolean;
   screening: boolean;
   data_import: boolean;
+  import_delete: boolean;
   settings: boolean;
   user_management: boolean;
 }
@@ -51,6 +62,7 @@ const PERMISSION_LABELS: Record<keyof UserPermissions, string> = {
   evaluations: "Başvuru Değerlendirme",
   screening: "Ön Eleme",
   data_import: "Veri Aktarımı",
+  import_delete: "Aktarım Silme",
   settings: "Ayarlar",
   user_management: "Kullanıcı Yönetimi",
 };
@@ -61,6 +73,7 @@ const DEFAULT_PERMISSIONS: UserPermissions = {
   evaluations: true,
   screening: true,
   data_import: true,
+  import_delete: false,
   settings: false,
   user_management: false,
 };
@@ -98,6 +111,13 @@ export default function SettingsPage() {
     password: "",
     role: "hr_manager",
     permissions: { ...DEFAULT_PERMISSIONS },
+  });
+  const [editForm, setEditForm] = useState({
+    fullName: "",
+    username: "",
+    email: "",
+    password: "",
+    role: "hr_manager",
   });
   const [editPerms, setEditPerms] = useState<UserPermissions>({
     ...DEFAULT_PERMISSIONS,
@@ -261,16 +281,35 @@ export default function SettingsPage() {
 
   const handleUpdateUser = async () => {
     if (!editingUser) return;
+    if (!editForm.fullName.trim() || !editForm.username.trim()) {
+      toastNotify.error("Ad soyad ve kullanıcı adı zorunludur");
+      return;
+    }
     setSaving("update-user");
     try {
+      const payload: Record<string, unknown> = {
+        fullName: editForm.fullName.trim(),
+        username: editForm.username.trim(),
+        email: editForm.email.trim() || null,
+        role: editForm.role,
+        permissions: editPerms,
+      };
+      if (editForm.password.trim()) {
+        if (editForm.password.length < 6) {
+          toastNotify.error("Parola en az 6 karakter olmalıdır");
+          setSaving(null);
+          return;
+        }
+        payload.password = editForm.password;
+      }
       const res = await fetch(`/api/admin/users/${editingUser.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ permissions: editPerms }),
+        body: JSON.stringify(payload),
       });
       const json = await res.json();
       if (json.success) {
-        toastNotify.success("Yetkiler güncellendi");
+        toastNotify.success("Kullanıcı güncellendi");
         setEditingUser(null);
         fetchUsers();
       } else toastNotify.error(json.error || "Hata oluştu");
@@ -320,7 +359,7 @@ export default function SettingsPage() {
   if (loading || !data) {
     return (
       <div className="flex items-center justify-center py-12">
-        <RoyalLoader size="lg" text="Ayarlar yükleniyor..." variant="spinner" />
+        <AppLoader size="lg" text="Ayarlar yükleniyor..." variant="spinner" />
       </div>
     );
   }
@@ -365,7 +404,8 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base text-mr-navy flex items-center gap-2">
-                <Bot className="w-4 h-4 inline-block mr-1" /> Yapay Zeka Sağlayıcı
+                <Bot className="w-4 h-4 inline-block mr-1" /> Yapay Zeka
+                Sağlayıcı
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -432,7 +472,8 @@ export default function SettingsPage() {
                             variant="secondary"
                             className="text-xs bg-green-50 text-green-700 border-green-200"
                           >
-                            API Key <Check className="w-3.5 h-3.5 inline-block ml-0.5" />
+                            API Key{" "}
+                            <Check className="w-3.5 h-3.5 inline-block ml-0.5" />
                           </Badge>
                         ) : (
                           <Badge variant="destructive" className="text-xs">
@@ -598,8 +639,9 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
-                <Lightbulb className="w-4 h-4 inline-block mr-1" /> Sesli sohbet, tarayıcınızın Web Speech API desteğine
-                bağlıdır. Microsoft Edge en iyi Türkçe ses deneyimini sunar.
+                <Lightbulb className="w-4 h-4 inline-block mr-1" /> Sesli
+                sohbet, tarayıcınızın Web Speech API desteğine bağlıdır.
+                Microsoft Edge en iyi Türkçe ses deneyimini sunar.
               </div>
             </CardContent>
           </Card>
@@ -613,7 +655,8 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base text-mr-navy flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 inline-block mr-1" /> AI Chat — Sistem Prompt&apos;u
+                <MessageSquare className="w-4 h-4 inline-block mr-1" /> AI Chat
+                — Sistem Prompt&apos;u
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -654,7 +697,8 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base text-mr-navy flex items-center gap-2">
-                <ClipboardList className="w-4 h-4 inline-block mr-1" /> Başvuru Değerlendirme — Sistem Prompt&apos;u
+                <ClipboardList className="w-4 h-4 inline-block mr-1" /> Başvuru
+                Değerlendirme — Sistem Prompt&apos;u
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -701,7 +745,8 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle className="text-base text-mr-navy flex items-center justify-between">
                 <span className="flex items-center gap-2">
-                  <Users className="w-4 h-4 inline-block mr-1" /> Kullanıcı Yönetimi
+                  <Users className="w-4 h-4 inline-block mr-1" /> Kullanıcı
+                  Yönetimi
                 </span>
                 <Button
                   onClick={() => setShowAddUser(!showAddUser)}
@@ -756,7 +801,7 @@ export default function SettingsPage() {
                           setNewUser({ ...newUser, email: e.target.value })
                         }
                         className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-mr-gold focus:ring-1 focus:ring-mr-gold/20 focus:outline-none"
-                        placeholder="ornek@meritroyal.com"
+                        placeholder="ornek@fbcareersystem.com"
                       />
                     </div>
                     <div>
@@ -898,6 +943,13 @@ export default function SettingsPage() {
                         size="sm"
                         onClick={() => {
                           setEditingUser(user);
+                          setEditForm({
+                            fullName: user.fullName,
+                            username: user.username,
+                            email: user.email || "",
+                            password: "",
+                            role: user.role,
+                          });
                           setEditPerms(
                             (user.permissions ||
                               DEFAULT_PERMISSIONS) as UserPermissions,
@@ -905,7 +957,7 @@ export default function SettingsPage() {
                         }}
                         className="text-xs h-7 px-2"
                       >
-                        Yetkiler
+                        Düzenle
                       </Button>
                       <Button
                         variant="ghost"
@@ -959,49 +1011,138 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Edit Permissions Modal */}
+      {/* Edit User Modal */}
       {editingUser && (
         <div
           className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
           onClick={() => setEditingUser(null)}
         >
           <div
-            className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4"
+            className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-base font-medium text-mr-navy">
-              {editingUser.fullName} — Yetki Düzenle
+            <h3 className="text-base font-semibold text-mr-navy">
+              Kullanıcı Düzenle — {editingUser.fullName}
             </h3>
-            <div className="space-y-2">
-              {(
-                Object.keys(PERMISSION_LABELS) as (keyof UserPermissions)[]
-              ).map((perm) => (
-                <label
-                  key={perm}
-                  className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer"
-                >
-                  <span className="text-sm text-mr-navy">
-                    {PERMISSION_LABELS[perm]}
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={editPerms[perm]}
-                    onChange={(e) =>
-                      setEditPerms({ ...editPerms, [perm]: e.target.checked })
-                    }
-                    className="w-4 h-4 rounded border-gray-300 text-mr-gold focus:ring-mr-gold"
-                  />
+
+            {/* User Info Fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-mr-text-muted block mb-1">
+                  Ad Soyad
                 </label>
-              ))}
+                <input
+                  type="text"
+                  value={editForm.fullName}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, fullName: e.target.value })
+                  }
+                  className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-mr-gold focus:ring-1 focus:ring-mr-gold/20 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-mr-text-muted block mb-1">
+                  Kullanıcı Adı
+                </label>
+                <input
+                  type="text"
+                  value={editForm.username}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, username: e.target.value })
+                  }
+                  disabled={editingUser.username === "admin"}
+                  className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-mr-gold focus:ring-1 focus:ring-mr-gold/20 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-mr-text-muted block mb-1">
+                  E-posta (opsiyonel)
+                </label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, email: e.target.value })
+                  }
+                  className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-mr-gold focus:ring-1 focus:ring-mr-gold/20 focus:outline-none"
+                  placeholder="ornek@fbcareersystem.com"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-mr-text-muted block mb-1">
+                  Rol
+                </label>
+                <select
+                  value={editForm.role}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, role: e.target.value })
+                  }
+                  aria-label="Kullanıcı rolü"
+                  className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-mr-gold focus:ring-1 focus:ring-mr-gold/20 focus:outline-none"
+                >
+                  <option value="hr_manager">İK Yöneticisi</option>
+                  <option value="hr_specialist">İK Uzmanı</option>
+                  <option value="admin">Yönetici</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-xs text-mr-text-muted block mb-1">
+                  Yeni Parola (boş bırakılırsa değişmez)
+                </label>
+                <input
+                  type="password"
+                  value={editForm.password}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, password: e.target.value })
+                  }
+                  className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-mr-gold focus:ring-1 focus:ring-mr-gold/20 focus:outline-none"
+                  placeholder="Min. 6 karakter"
+                  autoComplete="new-password"
+                />
+              </div>
             </div>
+
+            {/* Permissions */}
+            <div>
+              <label className="text-xs text-mr-text-muted block mb-2">
+                Yetkiler
+              </label>
+              <div className="space-y-1.5">
+                {(
+                  Object.keys(PERMISSION_LABELS) as (keyof UserPermissions)[]
+                ).map((perm) => (
+                  <label
+                    key={perm}
+                    className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer"
+                  >
+                    <span className="text-sm text-mr-navy">
+                      {PERMISSION_LABELS[perm]}
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={editPerms[perm]}
+                      onChange={(e) =>
+                        setEditPerms({ ...editPerms, [perm]: e.target.checked })
+                      }
+                      className="w-4 h-4 rounded border-gray-300 text-mr-gold focus:ring-mr-gold"
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setEditingUser(null)}>
+              <Button
+                variant="outline"
+                onClick={() => setEditingUser(null)}
+                className="cursor-pointer"
+              >
                 İptal
               </Button>
               <Button
                 onClick={handleUpdateUser}
                 disabled={saving === "update-user"}
-                className="bg-mr-navy hover:bg-mr-navy-light text-white"
+                className="bg-mr-navy hover:bg-mr-navy-light text-white cursor-pointer"
               >
                 {saving === "update-user" ? "Kaydediliyor..." : "Kaydet"}
               </Button>

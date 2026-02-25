@@ -25,17 +25,17 @@ const dancingScript = Dancing_Script({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://royalcareer.erkanerdem.net"),
-  title: "Merit Royal Kariyer",
-  description: "Merit Royal Hotels — Kariyer ve başvuru platformu",
+  title: "F&B Career System",
+  description: "F&B Career System — Kariyer ve başvuru platformu",
   icons: {
     icon: "/images/image.ico",
     apple: "/images/logo.png",
   },
   openGraph: {
-    title: "Merit Royal Kariyer",
-    description: "Merit Royal Hotels — Kariyer ve başvuru platformu",
+    title: "F&B Career System",
+    description: "F&B Career System — Kariyer ve başvuru platformu",
     url: "https://royalcareer.erkanerdem.net",
-    siteName: "Merit Royal Kariyer",
+    siteName: "F&B Career System",
     locale: "tr_TR",
     type: "website",
   },
@@ -48,7 +48,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr">
-      <body className={`${playfair.variable} ${inter.variable} ${dancingScript.variable} antialiased`}>
+      <body
+        className={`${playfair.variable} ${inter.variable} ${dancingScript.variable} antialiased`}
+      >
         {children}
       </body>
     </html>

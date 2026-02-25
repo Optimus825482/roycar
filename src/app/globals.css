@@ -4,9 +4,9 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ─── Merit Royal Design Tokens ─── */
+/* ─── F&B Career System Design Tokens ─── */
 :root {
-  /* Merit Royal Ana Renkler */
+  /* F&B Career System Ana Renkler */
   --mr-gold: #c5a55a;
   --mr-gold-light: #d4ba7a;
   --mr-gold-dark: #a68a3e;
@@ -24,8 +24,8 @@
 
   /* Metin */
   --mr-text-primary: #0f1d36;
-    --mr-text-secondary: #364152;
-    --mr-text-muted: #5a6578;
+  --mr-text-secondary: #364152;
+  --mr-text-muted: #5a6578;
 
   /* Arka Plan */
   --mr-bg-primary: #ffffff;
@@ -36,7 +36,7 @@
   --mr-font-heading: var(--font-playfair);
   --mr-font-body: var(--font-inter);
 
-  /* shadcn/ui — Merit Royal Tema */
+  /* shadcn/ui — F&B Career System Tema */
   --radius: 0.5rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.22 0.04 260);
@@ -52,7 +52,7 @@
   --secondary: oklch(0.73 0.1 80);
   --secondary-foreground: oklch(0.22 0.04 260);
   --muted: oklch(0.96 0.005 80);
-  --muted-foreground: oklch(0.40 0.03 260);
+  --muted-foreground: oklch(0.4 0.03 260);
   /* Accent = Gold Light */
   --accent: oklch(0.82 0.08 80);
   --accent-foreground: oklch(0.22 0.04 260);
@@ -90,8 +90,8 @@
   --color-mr-error: #c0392b;
   --color-mr-info: #2980b9;
   --color-mr-text-primary: #0f1d36;
-    --color-mr-text-secondary: #364152;
-    --color-mr-text-muted: #5a6578;
+  --color-mr-text-secondary: #364152;
+  --color-mr-text-muted: #5a6578;
   --color-mr-bg-secondary: #f5f3ef;
   --color-mr-bg-admin: #f8f9fc;
   --font-heading: var(--font-playfair);
@@ -156,9 +156,8 @@ h6 {
   }
 }
 
-/* ─── Royal Career Loading Animations ─── */
-@keyframes royalPulse {
-
+/* ─── F&B Career System Loading Animations ─── */
+@keyframes brandPulse {
   0%,
   100% {
     transform: scale(0.6);
@@ -326,9 +325,11 @@ h6 {
   box-shadow:
     0 2px 8px rgba(27, 42, 74, 0.06),
     0 0 0 1px rgba(197, 165, 90, 0.08);
-  background: linear-gradient(to right,
-      rgba(197, 165, 90, 0.03),
-      rgba(197, 165, 90, 0.01));
+  background: linear-gradient(
+    to right,
+    rgba(197, 165, 90, 0.03),
+    rgba(197, 165, 90, 0.01)
+  );
 }
 
 /* Global 3D transition */
@@ -339,5 +340,11 @@ h6 {
 [data-slot="select-content"],
 [data-slot="dropdown-menu-content"],
 [data-slot="table-row"] {
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   ORGANİZASYON ŞEMASI — Artık pure Tailwind, ek CSS yok
+   ═══════════════════════════════════════════════════════════════ */

@@ -26,15 +26,19 @@ import {
   Menu,
   ChevronDown,
   User,
+  Network,
+  Users,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/basvurular", label: "Başvurular", icon: ClipboardList },
   { href: "/admin/form-builder", label: "Form Builder", icon: PenTool },
-  { href: "/admin/on-eleme", label: "Ön Eleme", icon: Filter },
+  { href: "/admin/on-eleme", label: "Başvuru Değerlendirme", icon: Filter },
+  { href: "/admin/aday-gruplari", label: "Aday Grupları", icon: Users },
   { href: "/admin/chat", label: "AI Asistan", icon: Bot },
   { href: "/admin/veri-aktarimi", label: "Veri Aktarımı", icon: FolderInput },
+  { href: "/admin/organizasyon", label: "Org Şeması", icon: Network },
   { href: "/admin/ayarlar", label: "Ayarlar", icon: Settings },
 ];
 
@@ -66,15 +70,21 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-5 border-b border-white/10">
-            <Link href="/admin" className="flex items-center gap-3 cursor-pointer group">
+            <Link
+              href="/"
+              className="flex items-center gap-3 cursor-pointer group"
+            >
               <Image
-                src="/images/logo_NOBG.PNG"
-                alt="Merit Royal"
-                width={140}
-                height={46}
-                className="transition-opacity group-hover:opacity-90"
+                src="/images/logo.png"
+                alt="F&B Career System"
+                width={36}
+                height={36}
+                className="rounded-md transition-opacity group-hover:opacity-90"
                 priority
               />
+              <span className="text-sm font-semibold tracking-wide text-white/90">
+                F&B Career System
+              </span>
             </Link>
           </div>
 
@@ -136,7 +146,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className="hidden lg:block text-sm text-mr-text-secondary">
-            İK Başvuru Değerlendirme Sistemi
+            F&B Başvuru Değerlendirme Sistemi
           </div>
 
           <DropdownMenu>

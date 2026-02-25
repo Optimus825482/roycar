@@ -41,7 +41,9 @@ export async function GET(req: NextRequest) {
       const evalFilter: Record<string, unknown> = {};
       if (minScore) evalFilter.gte = parseInt(minScore);
       if (maxScore) evalFilter.lte = parseInt(maxScore);
-      where.evaluation = { overallScore: evalFilter };
+      where.evaluations = {
+        some: { status: "completed", overallScore: evalFilter },
+      };
     }
 
     if (dateFrom || dateTo) {
@@ -60,18 +62,20 @@ export async function GET(req: NextRequest) {
         where,
         include: {
           department: { select: { name: true } },
-          evaluation: {
+          evaluations: {
             select: {
               overallScore: true,
               status: true,
               report: true,
               evaluatedAt: true,
             },
+            orderBy: { createdAt: "desc" },
+            take: 1,
           },
         },
         orderBy:
           sortBy === "score"
-            ? { evaluation: { overallScore: sortOrder } }
+            ? { submittedAt: sortOrder }
             : { [sortBy]: sortOrder },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -85,9 +89,20 @@ export async function GET(req: NextRequest) {
       ),
     );
 
+    // Add backward-compatible `evaluation` field (latest)
+    const withEval = serialized.map((app: Record<string, unknown>) => {
+      const evals = app.evaluations as
+        | Array<Record<string, unknown>>
+        | undefined;
+      return {
+        ...app,
+        evaluation: evals?.[0] || null,
+      };
+    });
+
     return Response.json({
       success: true,
-      data: serialized,
+      data: withEval,
       meta: { total, page, pageSize, totalPages: Math.ceil(total / pageSize) },
     });
   } catch (err) {

@@ -21,7 +21,9 @@ export async function GET(
           },
           orderBy: { question: { sortOrder: "asc" } },
         },
-        evaluation: true,
+        evaluations: {
+          orderBy: { createdAt: "desc" as const },
+        },
         fieldValues: {
           include: {
             fieldDefinition: {
@@ -52,25 +54,43 @@ export async function GET(
         fullName: true,
         status: true,
         submittedAt: true,
+        positionTitle: true,
         formConfig: { select: { id: true, title: true } },
         department: { select: { name: true } },
-        evaluation: {
+        evaluations: {
           select: {
             overallScore: true,
             status: true,
             evaluatedAt: true,
             report: true,
           },
+          orderBy: { createdAt: "desc" },
+          take: 1,
         },
       },
       orderBy: { submittedAt: "desc" },
     });
 
-    const serialized = JSON.parse(
+    const raw = JSON.parse(
       JSON.stringify({ ...application, otherApplications }, (_k, v) =>
         typeof v === "bigint" ? v.toString() : v,
       ),
     );
+
+    // Backward compat: add `evaluation` (latest) from `evaluations` array
+    const serialized = {
+      ...raw,
+      evaluation: raw.evaluations?.[0] || null,
+      evaluationHistory: raw.evaluations || [],
+      otherApplications: raw.otherApplications?.map(
+        (oa: Record<string, unknown>) => {
+          const evals = oa.evaluations as
+            | Array<Record<string, unknown>>
+            | undefined;
+          return { ...oa, evaluation: evals?.[0] || null };
+        },
+      ),
+    };
 
     return Response.json({ success: true, data: serialized });
   } catch (err) {

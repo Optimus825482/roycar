@@ -1,10 +1,10 @@
 #!/bin/sh
 set -e
 
-echo "=== Merit Royal Kariyer — Starting ==="
+echo "=== F&B Career System — Starting ==="
 
 # Runtime defaults (can be overridden by environment)
-: "${DB_NAME:=royal_careerdb}"
+: "${DB_NAME:=fb_careerdb}"
 : "${DB_USER:=postgres}"
 : "${DB_PASSWORD:=postgres}"
 
@@ -25,7 +25,7 @@ DB_NAME_FOR_READY=$(echo "$DATABASE_URL" | sed -n 's|.*/\([^?]*\).*|\1|p')
 DB_HOST_FOR_READY=${DB_HOST_FOR_READY:-db}
 DB_PORT_FOR_READY=${DB_PORT_FOR_READY:-5432}
 DB_USER_FOR_READY=${DB_USER_FOR_READY:-postgres}
-DB_NAME_FOR_READY=${DB_NAME_FOR_READY:-royal_careerdb}
+DB_NAME_FOR_READY=${DB_NAME_FOR_READY:-fb_careerdb}
 
 echo ">>> Waiting for PostgreSQL..."
 for i in $(seq 1 60); do

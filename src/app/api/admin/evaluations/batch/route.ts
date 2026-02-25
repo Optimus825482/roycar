@@ -1,12 +1,22 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess } from "@/lib/utils";
-import { triggerEvaluation } from "@/services/evaluation.service";
+import {
+  triggerEvaluation,
+  type EvalCriteria,
+} from "@/services/evaluation.service";
 
 // POST /api/admin/evaluations/batch — Toplu AI değerlendirme başlat
 export async function POST(req: NextRequest) {
   try {
-    const { applicationIds, departmentId, onlyNew } = await req.json();
+    const { applicationIds, departmentId, onlyNew, customCriteria, sessionId } =
+      await req.json();
+
+    // Validate customCriteria if provided
+    const criteria: EvalCriteria | undefined =
+      Array.isArray(customCriteria) && customCriteria.length > 0
+        ? customCriteria
+        : undefined;
 
     let ids: bigint[] = [];
 
@@ -18,7 +28,7 @@ export async function POST(req: NextRequest) {
       // Specific application IDs provided
       ids = applicationIds.map((id: string | number) => BigInt(id));
     } else {
-      // Build filter query
+      // Build filter query — now always creates new evaluation records
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const where: any = {};
 
@@ -27,12 +37,10 @@ export async function POST(req: NextRequest) {
       }
 
       if (onlyNew) {
-        // Only applications without any evaluation
-        where.evaluation = null;
-      } else {
-        // Applications without evaluation OR with failed evaluation
-        where.OR = [{ evaluation: null }, { evaluation: { status: "failed" } }];
+        // Only applications without any completed evaluation
+        where.evaluations = { none: { status: "completed" } };
       }
+      // If not onlyNew, evaluate all matching applications (new record each time)
 
       const applications = await prisma.application.findMany({
         where,
@@ -54,9 +62,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Trigger evaluations (fire-and-forget, non-blocking)
+    // Each call creates a NEW evaluation record (history preserved)
+    const parsedSessionId = sessionId ? BigInt(sessionId) : undefined;
     let queued = 0;
     for (const appId of ids) {
-      triggerEvaluation(appId);
+      triggerEvaluation(appId, criteria, parsedSessionId);
       queued++;
     }
 

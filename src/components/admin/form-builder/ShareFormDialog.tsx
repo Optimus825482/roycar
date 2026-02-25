@@ -48,7 +48,7 @@ export function ShareFormDialog({
 
   function handleWhatsApp() {
     const text = encodeURIComponent(
-      `Merit Royal Hotels — Kariyer\n\n${formTitle}\n\nBaşvurmak için:\n${formUrl}`,
+      `F&B Career System — Kariyer\n\n${formTitle}\n\nBaşvurmak için:\n${formUrl}`,
     );
     window.open(`https://wa.me/?text=${text}`, "_blank");
   }

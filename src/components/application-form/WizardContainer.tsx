@@ -4,11 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 import { QuestionRenderer } from "./QuestionRenderer";
 import { WizardNavigation } from "./WizardNavigation";
 import { ProgressIndicator } from "./ProgressIndicator";
-import { RoyalLoader } from "@/components/shared/RoyalLoader";
+import { CameraPhotoCapture } from "./CameraPhotoCapture";
+import { AppLoader } from "@/components/shared/AppLoader";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -51,9 +54,12 @@ interface BranchingRule {
   priority: number;
 }
 
-interface Department {
+interface OrgPosition {
   id: string;
-  name: string;
+  title: string;
+  titleEn: string | null;
+  category: string;
+  level: number;
 }
 
 interface FormData {
@@ -64,7 +70,7 @@ interface FormData {
   branchingRules: BranchingRule[];
 }
 
-type WizardStep = "info" | "questions" | "review";
+type WizardStep = "info" | "position" | "questions" | "photo" | "review";
 
 // ─── Branching Engine ───
 
@@ -117,7 +123,7 @@ export function WizardContainer() {
 
   // Form data
   const [form, setForm] = useState<FormData | null>(null);
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const [orgPositions, setOrgPositions] = useState<OrgPosition[]>([]);
 
   // Wizard state
   const [step, setStep] = useState<WizardStep>("info");
@@ -132,8 +138,9 @@ export function WizardContainer() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [departmentId, setDepartmentId] = useState("");
+  const [positionId, setPositionId] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [infoError, setInfoError] = useState<string | null>(null);
 
   // Submit
@@ -143,12 +150,12 @@ export function WizardContainer() {
   useEffect(() => {
     async function load() {
       try {
-        const [formRes, deptRes] = await Promise.all([
+        const [formRes, orgRes] = await Promise.all([
           fetch("/api/apply/active-form"),
-          fetch("/api/departments"),
+          fetch("/api/org-chart"),
         ]);
         const formJson = await formRes.json();
-        const deptJson = await deptRes.json();
+        const orgJson = await orgRes.json();
 
         if (!formJson.success || !formJson.data) {
           setError(
@@ -196,20 +203,30 @@ export function WizardContainer() {
           }),
         );
 
+        // Filter out file-type photo questions — photo is now a separate step
+        const filteredQuestions = questions.filter(
+          (q: Question) => q.questionType !== "file",
+        );
+
         setForm({
           id: String(raw.id),
           title: raw.title,
           mode: raw.mode,
-          questions,
+          questions: filteredQuestions,
           branchingRules,
         });
 
-        if (deptJson.success && deptJson.data) {
-          setDepartments(
-            (deptJson.data as Record<string, unknown>[]).map((d) => ({
-              id: String(d.id),
-              name: d.name as string,
-            })),
+        if (orgJson.success && orgJson.data?.flat) {
+          setOrgPositions(
+            (orgJson.data.flat as Record<string, unknown>[])
+              .filter((p) => (p.level as number) >= 2) // Seviye 1 (direktör) hariç
+              .map((p) => ({
+                id: String(p.id),
+                title: p.title as string,
+                titleEn: (p.titleEn || p.title_en || null) as string | null,
+                category: p.category as string,
+                level: p.level as number,
+              })),
           );
         }
       } catch {
@@ -287,13 +304,17 @@ export function WizardContainer() {
       setQuestionPath((prev) => [...prev, nextIdx]);
       setValidationError(null);
     } else {
-      // No more questions → go to review
-      setStep("review");
+      // No more questions → go to photo step
+      setStep("photo");
     }
   }, [validateCurrentAnswer, getNextQuestion]);
 
   const handleBack = useCallback(() => {
     if (step === "review") {
+      setStep("photo");
+      return;
+    }
+    if (step === "photo") {
       setStep("questions");
       return;
     }
@@ -305,8 +326,8 @@ export function WizardContainer() {
       setQuestionPath(newPath);
       setValidationError(null);
     } else {
-      // First question → go back to info
-      setStep("info");
+      // First question → go back to position
+      setStep("position");
     }
   }, [step, questionPath]);
 
@@ -327,17 +348,13 @@ export function WizardContainer() {
       setInfoError("Telefon numarası zorunludur.");
       return false;
     }
-    if (!departmentId) {
-      setInfoError("Departman seçimi zorunludur.");
-      return false;
-    }
     setInfoError(null);
     return true;
-  }, [fullName, email, phone, departmentId]);
+  }, [fullName, email, phone]);
 
   const handleInfoNext = useCallback(() => {
     if (!validateInfo()) return;
-    setStep("questions");
+    setStep("position");
   }, [validateInfo]);
 
   // ─── Submit ───
@@ -406,7 +423,9 @@ export function WizardContainer() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           formConfigId: form.id,
-          departmentId,
+          positionId,
+          positionTitle:
+            orgPositions.find((p) => p.id === positionId)?.title || "",
           fullName: fullName.trim(),
           email: email.trim().toLowerCase(),
           phone: phone.trim(),
@@ -430,14 +449,24 @@ export function WizardContainer() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [form, answers, fullName, email, phone, departmentId, photoFile, router]);
+  }, [
+    form,
+    answers,
+    fullName,
+    email,
+    phone,
+    positionId,
+    orgPositions,
+    photoFile,
+    router,
+  ]);
 
   // ─── Render ───
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <RoyalLoader size="lg" text="Form yükleniyor..." variant="spinner" />
+        <AppLoader size="lg" text="Form yükleniyor..." variant="spinner" />
       </div>
     );
   }
@@ -541,48 +570,6 @@ export function WizardContainer() {
               aria-required="true"
             />
           </div>
-
-          <div>
-            <Label
-              htmlFor="department"
-              className="text-sm font-medium text-mr-navy"
-            >
-              Tercih Edilen Departman{" "}
-              <span className="text-mr-error" aria-hidden="true">
-                *
-              </span>
-              <span className="sr-only">(zorunlu)</span>
-            </Label>
-            <Select value={departmentId} onValueChange={setDepartmentId}>
-              <SelectTrigger
-                className="mt-1 h-12 text-base"
-                id="department"
-                aria-required="true"
-              >
-                <SelectValue placeholder="Departman seçiniz..." />
-              </SelectTrigger>
-              <SelectContent>
-                {departments.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>
-                    {d.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="photo" className="text-sm font-medium text-mr-navy">
-              Fotoğraf (opsiyonel)
-            </Label>
-            <Input
-              id="photo"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
-              className="mt-1 h-12 text-base file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:bg-mr-navy file:text-white hover:file:bg-mr-navy-light"
-            />
-          </div>
         </div>
 
         {infoError && (
@@ -595,9 +582,185 @@ export function WizardContainer() {
           <button
             onClick={handleInfoNext}
             className="px-8 py-3 bg-mr-navy text-white rounded-lg hover:bg-mr-navy-light transition-colors text-base font-medium focus:outline-none focus:ring-2 focus:ring-mr-gold focus:ring-offset-2"
+            aria-label="Pozisyon seçimine geç"
+          >
+            Devam Et →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Category labels ───
+  const categoryLabels: Record<string, string> = {
+    management: "🏢 Yönetim",
+    kitchen: "👨‍🍳 Mutfak",
+    service: "🍽️ Servis",
+    bar: "🍸 Bar & İçecek",
+    banquet: "🎉 Ziyafet",
+    room_service: "🛎️ Oda Servisi",
+    hygiene: "🧹 Hijyen & Steward",
+  };
+
+  const groupedPositions = orgPositions.reduce<Record<string, OrgPosition[]>>(
+    (acc, pos) => {
+      const cat = pos.category;
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(pos);
+      return acc;
+    },
+    {},
+  );
+
+  const selectedPosition = orgPositions.find((p) => p.id === positionId);
+
+  // ─── Step: Position ───
+  if (step === "position") {
+    return (
+      <div className="space-y-6" role="form" aria-label="Pozisyon seçimi">
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-semibold text-mr-navy font-heading">
+            Başvurulan Pozisyon
+          </h2>
+          <p className="text-mr-text-secondary">
+            Başvurmak istediğiniz pozisyonu seçin.
+          </p>
+        </div>
+
+        <div>
+          <Label
+            htmlFor="position"
+            className="text-sm font-medium text-mr-navy"
+          >
+            Pozisyon{" "}
+            <span className="text-mr-error" aria-hidden="true">
+              *
+            </span>
+            <span className="sr-only">(zorunlu)</span>
+          </Label>
+          <Select value={positionId} onValueChange={setPositionId}>
+            <SelectTrigger
+              className="mt-1 h-12 text-base"
+              id="position"
+              aria-required="true"
+            >
+              <SelectValue placeholder="Pozisyon seçiniz..." />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(groupedPositions).map(([cat, positions]) => (
+                <SelectGroup key={cat}>
+                  <SelectLabel className="text-mr-navy font-semibold">
+                    {categoryLabels[cat] || cat}
+                  </SelectLabel>
+                  {positions.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.title}
+                      {p.titleEn ? ` (${p.titleEn})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {selectedPosition && (
+            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-mr-navy font-medium">
+                {selectedPosition.title}
+              </p>
+              <p className="text-xs text-gray-600 mt-0.5">
+                {categoryLabels[selectedPosition.category] ||
+                  selectedPosition.category}{" "}
+                · Seviye {selectedPosition.level}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {validationError && (
+          <p className="text-sm text-mr-error text-center" role="alert">
+            {validationError}
+          </p>
+        )}
+
+        <div className="flex items-center justify-between pt-2">
+          <button
+            onClick={() => setStep("info")}
+            className="px-6 py-3 border border-border rounded-lg hover:bg-mr-bg-secondary transition-colors text-base focus:outline-none focus:ring-2 focus:ring-mr-gold focus:ring-offset-2"
+            aria-label="Kişisel bilgilere geri dön"
+          >
+            ← Geri
+          </button>
+          <button
+            onClick={() => {
+              if (!positionId) {
+                setValidationError("Pozisyon seçimi zorunludur.");
+                return;
+              }
+              setValidationError(null);
+              setStep("questions");
+            }}
+            className="px-8 py-3 bg-mr-navy text-white rounded-lg hover:bg-mr-navy-light transition-colors text-base font-medium focus:outline-none focus:ring-2 focus:ring-mr-gold focus:ring-offset-2"
             aria-label="Sorulara geç"
           >
             Sorulara Geç →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Step: Photo ───
+  if (step === "photo") {
+    return (
+      <div className="space-y-6" role="form" aria-label="Fotoğraf çekimi">
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-semibold text-mr-navy font-heading">
+            Fotoğraf
+          </h2>
+          <p className="text-mr-text-secondary">
+            Kameranızı kullanarak güncel bir vesikalık fotoğraf çekin.
+          </p>
+        </div>
+
+        <div className="max-w-md mx-auto">
+          <CameraPhotoCapture
+            existingPreview={photoPreview}
+            onPhotoReady={(file) => {
+              setPhotoFile(file);
+              setPhotoPreview(URL.createObjectURL(file));
+              setValidationError(null);
+            }}
+          />
+        </div>
+
+        {validationError && (
+          <p className="text-sm text-mr-error text-center" role="alert">
+            {validationError}
+          </p>
+        )}
+
+        <div className="flex items-center justify-between pt-2">
+          <button
+            onClick={handleBack}
+            className="px-6 py-3 border border-border rounded-lg hover:bg-mr-bg-secondary transition-colors text-base focus:outline-none focus:ring-2 focus:ring-mr-gold focus:ring-offset-2"
+            aria-label="Sorulara geri dön"
+          >
+            ← Geri
+          </button>
+          <button
+            onClick={() => {
+              if (!photoFile) {
+                setValidationError("Fotoğraf çekmeniz zorunludur.");
+                return;
+              }
+              setValidationError(null);
+              setStep("review");
+            }}
+            className="px-8 py-3 bg-mr-navy text-white rounded-lg hover:bg-mr-navy-light transition-colors text-base font-medium focus:outline-none focus:ring-2 focus:ring-mr-gold focus:ring-offset-2"
+            aria-label="Özete geç"
+          >
+            Özete Geç →
           </button>
         </div>
       </div>
@@ -618,8 +781,20 @@ export function WizardContainer() {
         </div>
 
         {/* Kişisel bilgiler özeti */}
-        <div className="bg-white rounded-lg border p-4 space-y-2">
+        <div className="bg-white rounded-lg border p-4 space-y-3">
           <h3 className="font-medium text-mr-navy">İletişim Bilgileri</h3>
+          {photoPreview && (
+            <div className="flex justify-center">
+              <div className="w-24 h-32 rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photoPreview}
+                  alt="Aday fotoğrafı"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          )}
           <dl className="grid grid-cols-2 gap-2 text-sm">
             <dt className="text-mr-text-muted">Ad Soyad:</dt>
             <dd className="text-mr-text-primary">{fullName}</dd>
@@ -627,9 +802,11 @@ export function WizardContainer() {
             <dd className="text-mr-text-primary">{email}</dd>
             <dt className="text-mr-text-muted">Telefon:</dt>
             <dd className="text-mr-text-primary">{phone}</dd>
-            <dt className="text-mr-text-muted">Departman:</dt>
+            <dt className="text-mr-text-muted">Başvurulan Pozisyon:</dt>
             <dd className="text-mr-text-primary">
-              {departments.find((d) => d.id === departmentId)?.name || "-"}
+              {selectedPosition
+                ? `${selectedPosition.title}${selectedPosition.titleEn ? ` (${selectedPosition.titleEn})` : ""}`
+                : "-"}
             </dd>
           </dl>
         </div>
@@ -733,7 +910,7 @@ export function WizardContainer() {
         onNext={handleNext}
         onSubmit={() => {
           if (!validateCurrentAnswer()) return;
-          setStep("review");
+          setStep("photo");
         }}
       />
     </div>

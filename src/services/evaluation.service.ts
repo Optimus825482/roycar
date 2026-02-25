@@ -56,10 +56,50 @@ function formatCandidateData(
   return lines.join("\n");
 }
 
+// ─── Build custom criteria prompt injection ───
+
+function buildCriteriaPrompt(customCriteria?: EvalCriteria): string {
+  if (!customCriteria || customCriteria.length === 0) return "";
+
+  const lines = [
+    "",
+    "═══ KULLANICININ BELİRLEDİĞİ EK DEĞERLENDİRME KRİTERLERİ ═══",
+    "Aşağıdaki kriterleri standart değerlendirme kriterlerine EK olarak uygula.",
+    "Her bir kriteri ayrı ayrı değerlendir ve raporda belirt.",
+    "",
+  ];
+
+  for (const c of customCriteria) {
+    const weightLabel =
+      c.weight === "high" ? "YÜKSEK" : c.weight === "low" ? "DÜŞÜK" : "ORTA";
+    lines.push(`• ${c.label} (Ağırlık: ${weightLabel})`);
+    if (c.description) lines.push(`  Açıklama: ${c.description}`);
+  }
+
+  lines.push("");
+  lines.push(
+    "Bu kriterleri JSON raporundaki 'customCriteriaResults' alanında ayrıca raporla:",
+  );
+  lines.push(
+    '  "customCriteriaResults": [{"criterion":"<kriter adı>","met":true/false,"note":"<açıklama>"}]',
+  );
+
+  return lines.join("\n");
+}
+
 // ─── Evaluate a single application ───
+
+export type EvalCriterion = {
+  label: string;
+  description?: string;
+  weight?: "high" | "medium" | "low";
+};
+export type EvalCriteria = EvalCriterion[];
 
 export async function evaluateApplication(
   applicationId: bigint,
+  customCriteria?: EvalCriteria,
+  sessionId?: bigint,
 ): Promise<void> {
   // Fetch application with department and questions
   const application = await prisma.application.findUnique({
@@ -86,25 +126,28 @@ export async function evaluateApplication(
 
   const candidateText = formatCandidateData(
     application,
-    application.department.name,
+    application.department?.name ||
+      application.positionTitle ||
+      "Belirtilmemiş",
     questionMap,
   );
 
-  // Create or get evaluation record
-  let evaluation = await prisma.evaluation.findUnique({
-    where: { applicationId },
+  // Always create a new evaluation record (history tracking)
+  let evaluation = await prisma.evaluation.create({
+    data: {
+      applicationId,
+      sessionId: sessionId || null,
+      overallScore: 0,
+      status: "pending",
+      report: {},
+      customCriteria: customCriteria
+        ? JSON.parse(JSON.stringify(customCriteria))
+        : undefined,
+      evaluationLabel: customCriteria?.length
+        ? `Özel Kriter (${customCriteria.map((c) => c.label).join(", ")})`
+        : "Standart Değerlendirme",
+    },
   });
-
-  if (!evaluation) {
-    evaluation = await prisma.evaluation.create({
-      data: {
-        applicationId,
-        overallScore: 0,
-        status: "pending",
-        report: {},
-      },
-    });
-  }
 
   // Retry loop with exponential backoff
   let lastError: Error | null = null;
@@ -119,10 +162,14 @@ export async function evaluateApplication(
       }
 
       const evalPrompt = await getSystemPrompt("evaluation_system_prompt");
+      const criteriaAddendum = buildCriteriaPrompt(customCriteria);
+      const finalPrompt = criteriaAddendum
+        ? evalPrompt + criteriaAddendum
+        : evalPrompt;
 
       const { content: rawResponse } = await chatCompletion(
         [
-          { role: "system", content: evalPrompt },
+          { role: "system", content: finalPrompt },
           { role: "user", content: candidateText },
         ],
         { temperature: 0.3, jsonMode: true },
@@ -157,7 +204,9 @@ export async function evaluateApplication(
       storeEvaluationMemory(
         application.fullName,
         application.email,
-        application.department.name,
+        application.department?.name ||
+          application.positionTitle ||
+          "Belirtilmemiş",
         Math.round(report.overallScore),
         report.summary || "",
         report.recommendation || "",
@@ -187,8 +236,12 @@ export async function evaluateApplication(
 
 // ─── Trigger evaluation (fire-and-forget) ───
 
-export function triggerEvaluation(applicationId: bigint): void {
-  evaluateApplication(applicationId).catch((err) => {
+export function triggerEvaluation(
+  applicationId: bigint,
+  customCriteria?: EvalCriteria,
+  sessionId?: bigint,
+): void {
+  evaluateApplication(applicationId, customCriteria, sessionId).catch((err) => {
     console.error(`Değerlendirme hatası (app: ${applicationId}):`, err);
   });
 }

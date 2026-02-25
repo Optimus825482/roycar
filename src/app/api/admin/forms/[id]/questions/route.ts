@@ -11,6 +11,20 @@ export async function POST(req: NextRequest, { params }: Params) {
     const formId = BigInt(id);
     const body = await req.json();
 
+    // Ad, e-posta, telefon soruları engelle — bunlar başvuru formunda otomatik alınıyor
+    const blockedPatterns = [
+      /\b(ad\s*soyad|adınız|isim|isminiz|full\s*name|name)\b/i,
+      /\b(e-?posta|email|mail\s*adres)/i,
+      /\b(telefon|phone|cep\s*tel|gsm)\b/i,
+    ];
+    const qText = (body.questionText || "").trim();
+    if (blockedPatterns.some((p) => p.test(qText))) {
+      return apiError(
+        "Ad, e-posta ve telefon bilgileri başvuru formunda otomatik olarak alınmaktadır. Bu bilgileri soru olarak eklemenize gerek yoktur.",
+        400,
+      );
+    }
+
     // Mevcut en yüksek sortOrder'ı bul
     const lastQuestion = await prisma.question.findFirst({
       where: { formConfigId: formId },

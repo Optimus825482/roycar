@@ -2,11 +2,7 @@
 
 import { useState } from "react";
 import { WizardContainer } from "@/components/application-form/WizardContainer";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 export default function ApplicationPage() {
@@ -28,9 +24,9 @@ export default function ApplicationPage() {
           </div>
 
           <p className="text-white/80 text-sm leading-relaxed text-center px-2">
-            Merit Royal&apos;ın prestijini ve tecrübesini yaşamak, varlığınızla
-            katkıda bulunmak üzere ilk adımı atmak üzeresiniz. Sizi aramızda
-            görmeyi umut ediyoruz.
+            F&B Career System&apos;ın prestijini ve tecrübesini yaşamak,
+            varlığınızla katkıda bulunmak üzere ilk adımı atmak üzeresiniz. Sizi
+            aramızda görmeyi umut ediyoruz.
           </p>
           <p className="text-mr-gold/70 text-xs text-center italic">
             Umarız her şey istediğiniz gibi olur.

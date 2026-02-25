@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { ShareFormDialog } from "@/components/admin/form-builder/ShareFormDialog";
+import { StaticTemplateButton } from "@/components/admin/form-builder/StaticTemplateButton";
+import { FormAiAssistant } from "@/components/admin/form-builder/FormAiAssistant";
 import type { FormListItem } from "@/types/form-builder";
 
 // BigInt JSON serialization helper
@@ -139,60 +141,63 @@ export default function FormBuilderPage() {
             Başvuru formlarını oluşturun ve yönetin
           </p>
         </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-mr-gold hover:bg-mr-gold-dark text-white">
-              + Yeni Form
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Yeni Form Oluştur</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label htmlFor="title">Form Başlığı</Label>
-                <Input
-                  id="title"
-                  placeholder="Örn: 2026 Yaz Sezonu Başvuru Formu"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mode">Form Modu</Label>
-                <Select
-                  value={newMode}
-                  onValueChange={(v) => setNewMode(v as "static" | "dynamic")}
-                >
-                  <SelectTrigger id="mode">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="static">
-                      Statik (Tüm sorular sıralı)
-                    </SelectItem>
-                    <SelectItem value="dynamic">
-                      Dinamik (Koşullu dallanma)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline">İptal</Button>
-              </DialogClose>
-              <Button
-                onClick={handleCreate}
-                disabled={creating}
-                className="bg-mr-gold hover:bg-mr-gold-dark text-white"
-              >
-                {creating ? "Oluşturuluyor..." : "Oluştur"}
+        <div className="flex items-center gap-2">
+          <StaticTemplateButton onCreated={fetchForms} />
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-mr-gold hover:bg-mr-gold-dark text-white">
+                + Yeni Form
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Yeni Form Oluştur</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Form Başlığı</Label>
+                  <Input
+                    id="title"
+                    placeholder="Örn: 2026 Yaz Sezonu Başvuru Formu"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mode">Form Modu</Label>
+                  <Select
+                    value={newMode}
+                    onValueChange={(v) => setNewMode(v as "static" | "dynamic")}
+                  >
+                    <SelectTrigger id="mode">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="static">
+                        Statik (Tüm sorular sıralı)
+                      </SelectItem>
+                      <SelectItem value="dynamic">
+                        Dinamik (Koşullu dallanma)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">İptal</Button>
+                </DialogClose>
+                <Button
+                  onClick={handleCreate}
+                  disabled={creating}
+                  className="bg-mr-gold hover:bg-mr-gold-dark text-white"
+                >
+                  {creating ? "Oluşturuluyor..." : "Oluştur"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {forms.length === 0 ? (
@@ -292,6 +297,9 @@ export default function FormBuilderPage() {
         onOpenChange={setShareOpen}
         formTitle={shareFormTitle}
       />
+
+      {/* AI Asistan — standalone mod, konuşarak form oluşturma */}
+      <FormAiAssistant standalone onFormCreated={() => fetchForms()} />
     </div>
   );
 }

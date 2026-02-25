@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { RoyalLoader } from "@/components/shared/RoyalLoader";
+import { AppLoader } from "@/components/shared/AppLoader";
 
 function ConfirmationContent() {
   const searchParams = useSearchParams();
@@ -79,7 +79,7 @@ export default function ConfirmationPage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center py-20">
-          <RoyalLoader size="md" text="Sayfa yükleniyor..." variant="spinner" />
+          <AppLoader size="md" text="Sayfa yükleniyor..." variant="spinner" />
         </div>
       }
     >

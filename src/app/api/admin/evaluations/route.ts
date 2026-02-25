@@ -15,21 +15,30 @@ export async function GET(req: NextRequest) {
       ? { departmentId: BigInt(departmentId) }
       : {};
 
-    // Stats — always from full dataset (no filter)
+    // Stats — count via raw SQL for accuracy with 1:N evaluations
     const [totalCount, evaluatedCount, pendingEvalCount, failedCount] =
       await Promise.all([
         prisma.application.count({ where: deptWhere }),
+        // Has at least one completed evaluation
         prisma.application.count({
-          where: { ...deptWhere, evaluation: { status: "completed" } },
+          where: {
+            ...deptWhere,
+            evaluations: { some: { status: "completed" } },
+          },
+        }),
+        // No evaluations at all, or only pending ones (no completed)
+        prisma.application.count({
+          where: {
+            ...deptWhere,
+            evaluations: { none: { status: "completed" } },
+          },
         }),
         prisma.application.count({
           where: {
             ...deptWhere,
-            OR: [{ evaluation: null }, { evaluation: { status: "pending" } }],
+            evaluations: { some: { status: "failed" } },
+            NOT: { evaluations: { some: { status: "completed" } } },
           },
-        }),
-        prisma.application.count({
-          where: { ...deptWhere, evaluation: { status: "failed" } },
         }),
       ]);
 
@@ -38,16 +47,14 @@ export async function GET(req: NextRequest) {
     const listWhere: any = { ...deptWhere };
     switch (filter) {
       case "pending":
-        listWhere.OR = [
-          { evaluation: null },
-          { evaluation: { status: "pending" } },
-        ];
+        listWhere.evaluations = { none: { status: "completed" } };
         break;
       case "completed":
-        listWhere.evaluation = { status: "completed" };
+        listWhere.evaluations = { some: { status: "completed" } };
         break;
       case "failed":
-        listWhere.evaluation = { status: "failed" };
+        listWhere.evaluations = { some: { status: "failed" } };
+        listWhere.NOT = { evaluations: { some: { status: "completed" } } };
         break;
     }
 
@@ -61,23 +68,40 @@ export async function GET(req: NextRequest) {
         phone: true,
         status: true,
         submittedAt: true,
+        positionTitle: true,
         department: { select: { id: true, name: true } },
-        evaluation: {
+        evaluations: {
           select: {
             id: true,
             overallScore: true,
             status: true,
             report: true,
+            customCriteria: true,
+            evaluationLabel: true,
             evaluatedAt: true,
             retryCount: true,
+            createdAt: true,
           },
+          orderBy: { createdAt: "desc" },
         },
       },
       orderBy: { submittedAt: "desc" },
     });
 
+    // Transform: add latest evaluation as `evaluation` for backward compat
+    // and full history as `evaluations`
+    const transformed = applications.map((app) => {
+      const latest = app.evaluations[0] || null;
+      return {
+        ...app,
+        evaluation: latest,
+        evaluationHistory: app.evaluations,
+        evaluationCount: app.evaluations.length,
+      };
+    });
+
     const serialized = JSON.parse(
-      JSON.stringify(applications, (_k, v) =>
+      JSON.stringify(transformed, (_k, v) =>
         typeof v === "bigint" ? v.toString() : v,
       ),
     );

@@ -27,13 +27,19 @@ export async function GET() {
         orderBy: { submittedAt: "desc" },
         include: {
           department: { select: { name: true } },
-          evaluation: { select: { overallScore: true, status: true } },
+          evaluations: {
+            select: { overallScore: true, status: true },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+          },
         },
       }),
     ]);
 
     // Departman isimlerini çek
-    const deptIds = departmentCounts.map((d) => d.departmentId);
+    const deptIds = departmentCounts
+      .map((d) => d.departmentId)
+      .filter((id): id is bigint => id !== null);
     const departments = await prisma.department.findMany({
       where: { id: { in: deptIds } },
       select: { id: true, name: true },
@@ -44,11 +50,13 @@ export async function GET() {
       statusCounts.map((s) => [s.status, s._count.id]),
     );
 
-    const departmentDistribution = departmentCounts.map((d) => ({
-      departmentId: d.departmentId.toString(),
-      departmentName: deptMap.get(d.departmentId.toString()) || "Bilinmiyor",
-      count: d._count.id,
-    }));
+    const departmentDistribution = departmentCounts
+      .filter((d) => d.departmentId !== null)
+      .map((d) => ({
+        departmentId: d.departmentId!.toString(),
+        departmentName: deptMap.get(d.departmentId!.toString()) || "Bilinmiyor",
+        count: d._count.id,
+      }));
 
     const recent = JSON.parse(
       JSON.stringify(recentApplications, (_k, v) =>

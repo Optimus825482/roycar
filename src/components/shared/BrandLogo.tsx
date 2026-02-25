@@ -1,26 +1,27 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-interface MeritRoyalLogoProps {
+interface BrandLogoProps {
   width?: number;
   height?: number;
   className?: string;
   variant?: "light" | "dark";
 }
 
-export function MeritRoyalLogo({
-  width = 180,
-  height = 60,
+export function BrandLogo({
+  width = 36,
+  height = 36,
   className,
   variant = "light",
-}: MeritRoyalLogoProps) {
+}: BrandLogoProps) {
   return (
     <Image
-      src="/images/logo_NOBG.PNG"
-      alt="Merit Royal Hotels"
+      src="/images/logo.png"
+      alt="F&B Career System"
       width={width}
       height={height}
       className={cn(
+        "rounded-md",
         variant === "dark" ? "brightness-0" : "",
         className,
       )}

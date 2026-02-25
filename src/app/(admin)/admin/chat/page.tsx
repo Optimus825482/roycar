@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useVoiceChat } from "@/hooks/useVoiceChat";
-import { RoyalLoader } from "@/components/shared/RoyalLoader";
+import { AppLoader } from "@/components/shared/AppLoader";
 
 interface ChatSession {
   id: string;
@@ -96,7 +96,7 @@ async function exportToPdf(tables: string[][][], filename: string) {
   // Header
   doc.setFontSize(14);
   doc.setTextColor(27, 42, 74); // mr-navy
-  doc.text("Merit Royal Hotels - AI Rapor", 14, 15);
+  doc.text("F&B Career System - AI Rapor", 14, 15);
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
   doc.text(new Date().toLocaleString("tr-TR"), 14, 21);
@@ -148,7 +148,7 @@ function TableExportButtons({ content }: { content: string }) {
   if (tables.length === 0) return null;
 
   const ts = new Date().toISOString().slice(0, 10);
-  const filename = `merit-ai-rapor-${ts}`;
+  const filename = `fb-career-ai-rapor-${ts}`;
 
   return (
     <div className="flex gap-2 mb-2">
@@ -783,7 +783,7 @@ export default function ChatPage() {
       <Card className="flex-1 flex flex-col overflow-hidden">
         <CardHeader className="border-b py-3 flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <CardTitle className="text-sm">Merit AI Asistan</CardTitle>
+            <CardTitle className="text-sm">Career AI Asistan</CardTitle>
             {activeModel && (
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-mr-bg-secondary text-mr-text-muted font-normal">
                 {activeModel}
@@ -1103,12 +1103,12 @@ export default function ChatPage() {
         >
           {loadingSessions ? (
             <div role="listitem" className="p-2" aria-live="polite">
-              <RoyalLoader size="sm" variant="dots" />
+              <AppLoader size="sm" variant="dots" />
             </div>
           ) : sessions.length === 0 ? (
-              <div role="listitem" className="text-sm text-mr-text-muted p-2">
+            <div role="listitem" className="text-sm text-mr-text-muted p-2">
               {showArchived ? "Arşivde sohbet yok." : "Henüz sohbet yok."}
-              </div>
+            </div>
           ) : (
             sessions.map((s) => (
               <div

@@ -1,8 +1,8 @@
--- Merit Royal HR — Hazır Başvuru Formu (CSV sütunlarına uygun)
+-- F&B Career System — Hazır Başvuru Formu (CSV sütunlarına uygun)
 -- Bu form, mevcut CSV/XLSX verilerinin alındığı Google Form yapısını yansıtır.
 
 INSERT INTO form_configs (id, title, mode, is_published, is_active, created_at, updated_at)
-VALUES (100, 'Merit Royal İş Başvuru Formu', 'static', true, true, NOW(), NOW())
+VALUES (100, 'F&B Career System İş Başvuru Formu', 'static', true, true, NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- Diğer formları unpublish et (sadece 1 aktif form olabilir)

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MeritRoyalLogo } from "@/components/shared/MeritRoyalLogo";
+import { BrandLogo } from "@/components/shared/BrandLogo";
 import { prisma } from "@/lib/prisma";
 import { FileUp, ArrowRight, Shield } from "lucide-react";
 
@@ -36,10 +36,15 @@ export default async function HomePage() {
       </div>
 
       <div className="relative z-10 flex flex-col items-center">
-        <MeritRoyalLogo width={260} height={86} />
+        <BrandLogo width={140} height={140} className="rounded-2xl" />
+
+        {/* Brand Name */}
+        <h1 className="mt-4 text-2xl sm:text-3xl font-bold tracking-widest text-white/90 uppercase">
+          F&B Career System
+        </h1>
 
         {/* Divider */}
-        <div className="w-20 h-px bg-mr-gold/40 mt-6 mb-4" />
+        <div className="w-20 h-px bg-mr-gold/40 mt-5 mb-4" />
 
         <p className="font-body text-white/60 text-center text-lg sm:text-xl tracking-wide leading-relaxed">
           En İyilerle Birlikte, Daha İyisi İçin.
@@ -74,7 +79,7 @@ export default async function HomePage() {
 
       <footer className="absolute bottom-6 left-0 right-0 text-center space-y-2">
         <p className="text-white/25 text-xs tracking-wide">
-          © {new Date().getFullYear()} Merit Royal Hotels — Tüm hakları saklıdır.
+          © {new Date().getFullYear()} F&B Career System — Tüm hakları saklıdır.
         </p>
         <Link
           href="/giris"

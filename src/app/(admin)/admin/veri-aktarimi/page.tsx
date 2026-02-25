@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, Fragment } from "react";
+import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,6 +68,7 @@ interface ReviewDecision {
 type Step = "upload" | "mapping" | "review" | "result";
 
 export default function DataImportPage() {
+  const { data: session } = useSession();
   const [step, setStep] = useState<Step>("upload");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -93,11 +95,24 @@ export default function DataImportPage() {
   // Review step (problematic rows)
   const [problemRows, setProblemRows] = useState<RowValidationIssue[]>([]);
   const [validCount, setValidCount] = useState(0);
-  const [reviewDecisions, setReviewDecisions] = useState<Record<number, ReviewDecision>>({});
+  const [reviewDecisions, setReviewDecisions] = useState<
+    Record<number, ReviewDecision>
+  >({});
 
   // Import logs
   const [logs, setLogs] = useState<ImportLog[]>([]);
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const userPerms = (
+    session?.user as { permissions?: Record<string, boolean> } | undefined
+  )?.permissions;
+
+  const canDeleteImport = !!(
+    session?.user &&
+    (userPerms?.import_delete ?? userPerms?.data_import)
+  );
 
   const fetchLogs = useCallback(async () => {
     try {
@@ -108,6 +123,27 @@ export default function DataImportPage() {
       toast.error("Aktarım geçmişi yüklenemedi");
     }
   }, []);
+
+  const handleDeleteImport = async (logId: string) => {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/import/logs/${logId}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success(json.message || "Aktarım başarıyla geri alındı.");
+        setDeleteConfirmId(null);
+        fetchLogs();
+      } else {
+        toast.error(json.error || "Silme işlemi başarısız.");
+      }
+    } catch {
+      toast.error("Aktarım silinirken hata oluştu.");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
@@ -211,7 +247,8 @@ export default function DataImportPage() {
       await executeImport();
     } catch {
       toast.error("Veri aktarımı başarısız", {
-        description: "Lütfen dosyayı ve eşleştirmeleri kontrol ederek tekrar deneyin.",
+        description:
+          "Lütfen dosyayı ve eşleştirmeleri kontrol ederek tekrar deneyin.",
       });
     }
     setImporting(false);
@@ -249,7 +286,8 @@ export default function DataImportPage() {
       }
     } catch {
       toast.error("Veri aktarımı başarısız", {
-        description: "Lütfen dosyayı ve eşleştirmeleri kontrol ederek tekrar deneyin.",
+        description:
+          "Lütfen dosyayı ve eşleştirmeleri kontrol ederek tekrar deneyin.",
       });
     }
     setImporting(false);
@@ -318,7 +356,9 @@ export default function DataImportPage() {
               className="bg-mr-navy hover:bg-mr-navy-light"
               aria-busy={uploading}
             >
-              {uploading ? `Yükleniyor... %${uploadProgress}` : "Dosyayı Analiz Et"}
+              {uploading
+                ? `Yükleniyor... %${uploadProgress}`
+                : "Dosyayı Analiz Et"}
             </Button>
             {uploading && (
               <div
@@ -352,8 +392,9 @@ export default function DataImportPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-mr-text-muted">
-                Dosyadaki sütunları sistem alanlarıyla eşleştirin.
-                Eşleşmeyen sütunlar <strong>dinamik alan</strong> olarak otomatik kaydedilir.
+                Dosyadaki sütunları sistem alanlarıyla eşleştirin. Eşleşmeyen
+                sütunlar <strong>dinamik alan</strong> olarak otomatik
+                kaydedilir.
                 {mappedCount > 0 && (
                   <span className="text-mr-navy font-medium">
                     {" "}
@@ -406,7 +447,10 @@ export default function DataImportPage() {
                       </Badge>
                     )}
                     {!autoMapping[h] && columnMapping[h] === "_dynamic" && (
-                      <Badge variant="outline" className="text-xs text-mr-gold border-mr-gold">
+                      <Badge
+                        variant="outline"
+                        className="text-xs text-mr-gold border-mr-gold"
+                      >
                         Dinamik
                       </Badge>
                     )}
@@ -486,11 +530,16 @@ export default function DataImportPage() {
               <div className="flex items-center gap-4 text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-mr-success" />
-                  <span><strong>{validCount}</strong> satır sorunsuz aktarılacak</span>
+                  <span>
+                    <strong>{validCount}</strong> satır sorunsuz aktarılacak
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-mr-warning" />
-                  <span><strong>{problemRows.length}</strong> satırda sorun tespit edildi</span>
+                  <span>
+                    <strong>{problemRows.length}</strong> satırda sorun tespit
+                    edildi
+                  </span>
                 </div>
               </div>
 
@@ -505,7 +554,8 @@ export default function DataImportPage() {
                   size="sm"
                   onClick={() => {
                     const updated: Record<number, ReviewDecision> = {};
-                    for (const pr of problemRows) updated[pr.row] = { action: "skip" };
+                    for (const pr of problemRows)
+                      updated[pr.row] = { action: "skip" };
                     setReviewDecisions(updated);
                   }}
                 >
@@ -516,7 +566,8 @@ export default function DataImportPage() {
                   size="sm"
                   onClick={() => {
                     const updated: Record<number, ReviewDecision> = {};
-                    for (const pr of problemRows) updated[pr.row] = { action: "import_empty" };
+                    for (const pr of problemRows)
+                      updated[pr.row] = { action: "import_empty" };
                     setReviewDecisions(updated);
                   }}
                 >
@@ -536,7 +587,10 @@ export default function DataImportPage() {
                       {/* Satır başlığı */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="font-mono text-xs">
+                          <Badge
+                            variant="outline"
+                            className="font-mono text-xs"
+                          >
                             Satır {pr.row}
                           </Badge>
                           {pr.rowData[Object.keys(pr.rowData)[0]] && (
@@ -549,12 +603,17 @@ export default function DataImportPage() {
 
                       {/* Sorunlu alanlar */}
                       {pr.issues.map((issue) => (
-                        <div key={issue.field} className="bg-red-50 rounded p-3 space-y-2">
+                        <div
+                          key={issue.field}
+                          className="bg-red-50 rounded p-3 space-y-2"
+                        >
                           <div className="flex items-center gap-2 text-sm">
                             <Badge variant="destructive" className="text-xs">
                               {issue.fieldLabel}
                             </Badge>
-                            <span className="text-mr-text-muted">{issue.reason}</span>
+                            <span className="text-mr-text-muted">
+                              {issue.reason}
+                            </span>
                             {issue.currentValue && (
                               <code className="bg-red-100 px-2 py-0.5 rounded text-xs text-red-700 max-w-48 truncate inline-block">
                                 {issue.currentValue}
@@ -568,17 +627,35 @@ export default function DataImportPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <Button
                           size="sm"
-                          variant={dec.action === "skip" ? "default" : "outline"}
-                          onClick={() => updateDecision(pr.row, { action: "skip" })}
-                          className={dec.action === "skip" ? "bg-mr-navy hover:bg-mr-navy-light" : ""}
+                          variant={
+                            dec.action === "skip" ? "default" : "outline"
+                          }
+                          onClick={() =>
+                            updateDecision(pr.row, { action: "skip" })
+                          }
+                          className={
+                            dec.action === "skip"
+                              ? "bg-mr-navy hover:bg-mr-navy-light"
+                              : ""
+                          }
                         >
                           Satırı Atla
                         </Button>
                         <Button
                           size="sm"
-                          variant={dec.action === "import_empty" ? "default" : "outline"}
-                          onClick={() => updateDecision(pr.row, { action: "import_empty" })}
-                          className={dec.action === "import_empty" ? "bg-mr-gold hover:bg-mr-gold-dark text-white" : ""}
+                          variant={
+                            dec.action === "import_empty"
+                              ? "default"
+                              : "outline"
+                          }
+                          onClick={() =>
+                            updateDecision(pr.row, { action: "import_empty" })
+                          }
+                          className={
+                            dec.action === "import_empty"
+                              ? "bg-mr-gold hover:bg-mr-gold-dark text-white"
+                              : ""
+                          }
                         >
                           Boş Olarak Aktar
                         </Button>
@@ -588,12 +665,21 @@ export default function DataImportPage() {
                           onClick={() =>
                             updateDecision(pr.row, {
                               action: "fix",
-                              fixes: dec.fixes || Object.fromEntries(
-                                pr.issues.map((iss) => [iss.field, iss.currentValue])
-                              ),
+                              fixes:
+                                dec.fixes ||
+                                Object.fromEntries(
+                                  pr.issues.map((iss) => [
+                                    iss.field,
+                                    iss.currentValue,
+                                  ]),
+                                ),
                             })
                           }
-                          className={dec.action === "fix" ? "bg-mr-success hover:bg-mr-success/90 text-white" : ""}
+                          className={
+                            dec.action === "fix"
+                              ? "bg-mr-success hover:bg-mr-success/90 text-white"
+                              : ""
+                          }
                         >
                           Düzelt
                         </Button>
@@ -602,15 +688,29 @@ export default function DataImportPage() {
                         {dec.action === "fix" && (
                           <div className="flex flex-wrap gap-2 ml-2">
                             {pr.issues.map((issue) => (
-                              <div key={issue.field} className="flex items-center gap-1">
-                                <span className="text-xs text-mr-text-muted">{issue.fieldLabel}:</span>
+                              <div
+                                key={issue.field}
+                                className="flex items-center gap-1"
+                              >
+                                <span className="text-xs text-mr-text-muted">
+                                  {issue.fieldLabel}:
+                                </span>
                                 <Input
                                   className="w-52 h-8 text-sm"
                                   placeholder={`Doğru ${issue.fieldLabel.toLowerCase()} girin`}
-                                  value={dec.fixes?.[issue.field] ?? issue.currentValue}
+                                  value={
+                                    dec.fixes?.[issue.field] ??
+                                    issue.currentValue
+                                  }
                                   onChange={(e) => {
-                                    const newFixes = { ...(dec.fixes || {}), [issue.field]: e.target.value };
-                                    updateDecision(pr.row, { action: "fix", fixes: newFixes });
+                                    const newFixes = {
+                                      ...(dec.fixes || {}),
+                                      [issue.field]: e.target.value,
+                                    };
+                                    updateDecision(pr.row, {
+                                      action: "fix",
+                                      fixes: newFixes,
+                                    });
                                   }}
                                 />
                               </div>
@@ -765,6 +865,9 @@ export default function DataImportPage() {
                     <TableHead className="text-xs text-center">Durum</TableHead>
                     <TableHead className="text-xs">Tarih</TableHead>
                     <TableHead className="text-xs w-10"></TableHead>
+                    {canDeleteImport && (
+                      <TableHead className="text-xs w-10"></TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -820,13 +923,44 @@ export default function DataImportPage() {
                             </span>
                           )}
                         </TableCell>
+                        {canDeleteImport && (
+                          <TableCell className="text-xs">
+                            <button
+                              type="button"
+                              title="Aktarımı geri al"
+                              className="text-mr-text-muted hover:text-mr-error transition-colors p-1 rounded cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteConfirmId(log.id);
+                              }}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M3 6h18" />
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                                <line x1="10" x2="10" y1="11" y2="17" />
+                                <line x1="14" x2="14" y1="11" y2="17" />
+                              </svg>
+                            </button>
+                          </TableCell>
+                        )}
                       </TableRow>
                       {expandedLog === log.id &&
                         log.errorDetails &&
                         log.errorDetails.length > 0 && (
                           <TableRow key={`${log.id}-details`}>
                             <TableCell
-                              colSpan={7}
+                              colSpan={canDeleteImport ? 8 : 7}
                               className="bg-mr-bg-subtle p-0"
                             >
                               <div className="p-3 space-y-2">
@@ -872,6 +1006,49 @@ export default function DataImportPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-mr-navy">
+              Aktarımı Geri Al
+            </h3>
+            <p className="text-sm text-mr-text-secondary">
+              Bu aktarımla birlikte içe aktarılan{" "}
+              <span className="font-semibold text-mr-error">
+                tüm başvurular kalıcı olarak silinecektir
+              </span>
+              . Bu işlem geri alınamaz.
+            </p>
+            <p className="text-xs text-mr-text-muted bg-mr-bg-subtle p-3 rounded-lg">
+              Dosya: {logs.find((l) => l.id === deleteConfirmId)?.fileName} —{" "}
+              {logs.find((l) => l.id === deleteConfirmId)?.importedCount}{" "}
+              başvuru silinecek
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDeleteConfirmId(null)}
+                disabled={deleting}
+                className="cursor-pointer"
+              >
+                İptal
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => handleDeleteImport(deleteConfirmId)}
+                disabled={deleting}
+                className="cursor-pointer"
+              >
+                {deleting ? "Siliniyor..." : "Evet, Geri Al"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
