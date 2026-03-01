@@ -32,7 +32,6 @@ import {
   Pencil,
   Trash2,
   Building2,
-  ChefHat,
 } from "lucide-react";
 
 // ─── Types ───
@@ -73,7 +72,6 @@ type PositionTemplate = {
 
 const CATEGORIES = [
   { value: "management", label: "Yönetim" },
-  { value: "kitchen", label: "Mutfak" },
   { value: "service", label: "Servis" },
   { value: "bar", label: "Bar" },
   { value: "banquet", label: "Ziyafet" },
@@ -95,12 +93,6 @@ const CAT_CONFIG: Record<
     color: "#D97706",
     bg: "#FEF3C7",
     icon: Crown,
-  },
-  kitchen: {
-    label: "Mutfak",
-    color: "#DC2626",
-    bg: "#FEE2E2",
-    icon: ChefHat,
   },
   service: {
     label: "Servis",
@@ -150,6 +142,9 @@ const EMPTY_FORM = {
   skills: { management: 0, technical: 0, social: 0, physical: 0, crisis: 0 },
   sortOrder: 0,
 };
+
+// Template seçmeden özel pozisyon oluşturmak için sabit
+const CUSTOM_TEMPLATE_ID = "__custom__";
 
 // ─── Build tree from flat list ───
 
@@ -469,7 +464,7 @@ export default function AdminOrgChartPage() {
   const handleTemplateSelect = useCallback(
     (templateId: string) => {
       setSelectedTemplateId(templateId);
-      if (!templateId) {
+      if (!templateId || templateId === CUSTOM_TEMPLATE_ID) {
         setForm(EMPTY_FORM);
         return;
       }
@@ -508,6 +503,9 @@ export default function AdminOrgChartPage() {
     }
     return groups;
   }, [templates]);
+
+  // "__custom__" = template seçmeden özel pozisyon oluştur
+  const CUSTOM_TEMPLATE_ID = "__custom__";
 
   const openCreate = useCallback(() => {
     setEditingId(null);
@@ -705,7 +703,7 @@ export default function AdminOrgChartPage() {
             {!editingId && (
               <div>
                 <label className="text-xs font-medium text-gray-700 mb-1 block">
-                  Pozisyon Tipi Seçin *
+                  Pozisyon Tipi Seçin
                 </label>
                 <Select
                   value={selectedTemplateId || "__none__"}
@@ -718,6 +716,9 @@ export default function AdminOrgChartPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">— Pozisyon seçin —</SelectItem>
+                    <SelectItem value={CUSTOM_TEMPLATE_ID}>
+                      ✏️ Özel Pozisyon Oluştur
+                    </SelectItem>
                     {groupedTemplates.map(({ label, items }) => (
                       <div key={label}>
                         <div className="px-2 py-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider border-t border-gray-100 mt-1 first:mt-0 first:border-0">
@@ -782,8 +783,9 @@ export default function AdminOrgChartPage() {
               <>
                 <div className="border-t border-gray-100 pt-3">
                   <p className="text-[11px] text-gray-500 mb-3">
-                    Aşağıdaki değerler otomatik dolduruldu. İsterseniz
-                    değiştirebilirsiniz.
+                    {selectedTemplateId === CUSTOM_TEMPLATE_ID
+                      ? "Yeni pozisyon bilgilerini girin."
+                      : "Aşağıdaki değerler otomatik dolduruldu. İsterseniz değiştirebilirsiniz."}
                   </p>
                 </div>
 
@@ -964,7 +966,12 @@ export default function AdminOrgChartPage() {
             <div className="flex gap-2 pt-2">
               <Button
                 onClick={handleSave}
-                disabled={saving || (!editingId && !selectedTemplateId)}
+                disabled={
+                  saving ||
+                  (!editingId && !selectedTemplateId) ||
+                  (selectedTemplateId === CUSTOM_TEMPLATE_ID &&
+                    !form.title.trim())
+                }
                 className="flex-1 gap-1"
               >
                 <Save className="w-4 h-4" />
