@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 
 // GET — Tüm oturumları listele
 export async function GET() {
@@ -8,6 +9,7 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
       include: {
         _count: { select: { evaluations: true } },
+        createdBy: { select: { id: true, fullName: true, username: true } },
       },
     });
 
@@ -18,6 +20,13 @@ export async function GET() {
       criteria: s.criteria,
       status: s.status,
       evaluationCount: s._count.evaluations,
+      createdBy: s.createdBy
+        ? {
+            id: s.createdBy.id.toString(),
+            fullName: s.createdBy.fullName,
+            username: s.createdBy.username,
+          }
+        : null,
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),
     }));
@@ -35,6 +44,9 @@ export async function GET() {
 // POST — Yeni oturum oluştur
 export async function POST(req: NextRequest) {
   try {
+    const authSession = await auth();
+    const userId = authSession?.user?.id ? BigInt(authSession.user.id) : null;
+
     const body = await req.json();
     const { label, description, criteria } = body;
 
@@ -43,6 +55,7 @@ export async function POST(req: NextRequest) {
         label: label || null,
         description: description || null,
         criteria: criteria || [],
+        createdById: userId,
       },
     });
 

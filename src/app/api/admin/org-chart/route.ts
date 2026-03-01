@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
         title: title.trim(),
         titleEn: titleEn?.trim() || null,
         description: description?.trim() || null,
-        category: category || "kitchen",
+        category: category || "service",
         level: level || 3,
         parentId: parentId ? BigInt(parentId) : null,
         authorityScore: authorityScore || 0,

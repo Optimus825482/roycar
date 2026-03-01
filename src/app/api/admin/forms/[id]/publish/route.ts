@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiError, apiSuccess } from "@/lib/utils";
+import { apiError, apiSuccess, safeBigInt } from "@/lib/utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -8,23 +8,28 @@ type Params = { params: Promise<{ id: string }> };
 export async function PATCH(_req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
+    const formId = safeBigInt(id);
+    if (!formId) return apiError("Geçersiz form ID", 400);
+
     const form = await prisma.formConfig.findUnique({
-      where: { id: BigInt(id) },
+      where: { id: formId },
     });
 
     if (!form) return apiError("Form bulunamadı.", 404);
 
-    // Yayınlanıyorsa, diğer formları geri çek
-    if (!form.isPublished) {
-      await prisma.formConfig.updateMany({
-        where: { isPublished: true, id: { not: BigInt(id) } },
-        data: { isPublished: false },
+    // Atomic transaction to prevent race condition
+    const updated = await prisma.$transaction(async (tx) => {
+      // Yayınlanıyorsa, diğer formları geri çek
+      if (!form.isPublished) {
+        await tx.formConfig.updateMany({
+          where: { isPublished: true, id: { not: formId } },
+          data: { isPublished: false },
+        });
+      }
+      return tx.formConfig.update({
+        where: { id: formId },
+        data: { isPublished: !form.isPublished },
       });
-    }
-
-    const updated = await prisma.formConfig.update({
-      where: { id: BigInt(id) },
-      data: { isPublished: !form.isPublished },
     });
 
     return Response.json(

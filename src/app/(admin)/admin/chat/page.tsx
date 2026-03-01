@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import ReactMarkdown from "react-markdown";
+import dynamic from "next/dynamic";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
+
+const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";

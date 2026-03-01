@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import Cropper from "react-easy-crop";
+import dynamic from "next/dynamic";
 import type { Area } from "react-easy-crop";
+
+const Cropper = dynamic(() => import("react-easy-crop"), { ssr: false });
 import {
   Camera,
   RotateCcw,
@@ -438,6 +440,7 @@ export function CameraPhotoCapture({
     return (
       <div className="space-y-3">
         <div className="relative h-72 rounded-xl overflow-hidden bg-gray-900">
+          {/* @ts-expect-error react-easy-crop types mark optional props as required */}
           <Cropper
             image={imageSrc}
             crop={crop}

@@ -68,9 +68,9 @@ export async function GET(req: NextRequest) {
               status: true,
               report: true,
               evaluatedAt: true,
+              finalDecision: true,
             },
             orderBy: { createdAt: "desc" },
-            take: 1,
           },
         },
         orderBy:
@@ -90,13 +90,20 @@ export async function GET(req: NextRequest) {
     );
 
     // Add backward-compatible `evaluation` field (latest)
+    // Override status to "hired" if ANY evaluation has finalDecision = "hired"
     const withEval = serialized.map((app: Record<string, unknown>) => {
       const evals = app.evaluations as
         | Array<Record<string, unknown>>
         | undefined;
+      const latestEval = evals?.[0] || null;
+      const hasHiredDecision = evals?.some((e) => e.finalDecision === "hired");
+      const effectiveStatus = hasHiredDecision
+        ? "hired"
+        : (app.status as string);
       return {
         ...app,
-        evaluation: evals?.[0] || null,
+        status: effectiveStatus,
+        evaluation: latestEval,
       };
     });
 

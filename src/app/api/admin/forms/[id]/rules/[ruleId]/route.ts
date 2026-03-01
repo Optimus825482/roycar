@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiError, apiSuccess } from "@/lib/utils";
+import { apiError, apiSuccess, safeBigInt } from "@/lib/utils";
 
 type Params = { params: Promise<{ id: string; ruleId: string }> };
 
@@ -8,10 +8,12 @@ type Params = { params: Promise<{ id: string; ruleId: string }> };
 export async function PUT(req: NextRequest, { params }: Params) {
   try {
     const { ruleId } = await params;
+    const rid = safeBigInt(ruleId);
+    if (!rid) return apiError("Geçersiz kural ID", 400);
     const body = await req.json();
 
     const rule = await prisma.branchingRule.update({
-      where: { id: BigInt(ruleId) },
+      where: { id: rid },
       data: {
         ...(body.sourceQuestionId && {
           sourceQuestionId: BigInt(body.sourceQuestionId),
@@ -36,7 +38,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     const { ruleId } = await params;
-    await prisma.branchingRule.delete({ where: { id: BigInt(ruleId) } });
+    const rid = safeBigInt(ruleId);
+    if (!rid) return apiError("Geçersiz kural ID", 400);
+    await prisma.branchingRule.delete({ where: { id: rid } });
     return Response.json(apiSuccess(null, "Kural silindi."));
   } catch (err) {
     console.error("Kural silme hatası:", err);

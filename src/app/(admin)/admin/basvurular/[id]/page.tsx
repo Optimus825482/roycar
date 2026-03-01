@@ -23,6 +23,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  exportToPDF,
+  exportToExcel,
+  printEvaluation,
+  type EvalExportData,
+} from "@/lib/export-utils";
 
 /* ─────────── Types ─────────── */
 
@@ -54,6 +60,28 @@ interface FieldValue {
   };
 }
 
+interface EvalHistoryRecord {
+  id: string;
+  overallScore: number;
+  status: string;
+  report: EvalReport | null;
+  evaluationLabel?: string | null;
+  evaluatedAt: string | null;
+  createdAt?: string;
+  session?: {
+    id: string;
+    label: string | null;
+    description: string | null;
+    status: string;
+    createdAt: string;
+  } | null;
+  createdBy?: {
+    id: string;
+    fullName: string;
+    username: string;
+  } | null;
+}
+
 interface ApplicationDetail {
   id: string;
   applicationNo: string;
@@ -81,6 +109,7 @@ interface ApplicationDetail {
     evaluatedAt: string | null;
     retryCount: number;
   } | null;
+  evaluationHistory?: EvalHistoryRecord[];
   fieldValues?: FieldValue[];
   otherApplications?: OtherApplication[];
 }
@@ -386,6 +415,54 @@ export default function ApplicationDetailPage() {
     setLoadingResponses(null);
   };
 
+  /* — Export helpers — */
+
+  const buildExportData = useCallback((): EvalExportData | null => {
+    if (!app || !app.evaluation || app.evaluation.status !== "completed")
+      return null;
+    return {
+      candidateName: app.fullName,
+      email: app.email,
+      phone: app.phone,
+      department: app.department?.name || "—",
+      positionTitle: app.positionTitle || undefined,
+      applicationNo: app.applicationNo,
+      submittedAt: app.submittedAt,
+      status: app.status,
+      overallScore: app.evaluation.overallScore,
+      evaluatedAt: app.evaluation.evaluatedAt,
+      report: app.evaluation.report as EvalExportData["report"],
+    };
+  }, [app]);
+
+  const handleExportPDF = async () => {
+    const d = buildExportData();
+    if (!d) return toast.error("Değerlendirme verisi bulunamadı");
+    try {
+      await exportToPDF(d);
+      toast.success("PDF indirildi");
+    } catch {
+      toast.error("PDF oluşturulamadı");
+    }
+  };
+
+  const handleExportExcel = async () => {
+    const d = buildExportData();
+    if (!d) return toast.error("Değerlendirme verisi bulunamadı");
+    try {
+      await exportToExcel(d);
+      toast.success("Excel indirildi");
+    } catch {
+      toast.error("Excel oluşturulamadı");
+    }
+  };
+
+  const handlePrint = () => {
+    const d = buildExportData();
+    if (!d) return toast.error("Değerlendirme verisi bulunamadı");
+    printEvaluation(d);
+  };
+
   /* — Render helpers — */
 
   const formatDate = (dateStr: string | null | undefined) => {
@@ -584,15 +661,41 @@ export default function ApplicationDetailPage() {
                 </Button>
               )}
               {app.evaluation?.status === "completed" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs"
-                  onClick={retryEvaluation}
-                  disabled={retrying}
-                >
-                  {retrying ? "Deneniyor..." : "🔄 Yeniden Değerlendir"}
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs border-red-200 text-red-700 hover:bg-red-50"
+                    onClick={handleExportPDF}
+                  >
+                    📄 PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs border-green-200 text-green-700 hover:bg-green-50"
+                    onClick={handleExportExcel}
+                  >
+                    📊 Excel
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
+                    onClick={handlePrint}
+                  >
+                    🖨️ Yazdır
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={retryEvaluation}
+                    disabled={retrying}
+                  >
+                    {retrying ? "Deneniyor..." : "🔄 Yeniden Değerlendir"}
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -720,6 +823,114 @@ export default function ApplicationDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* ═══════════════════ DEĞERLENDİRME GEÇMİŞİ ═══════════════════ */}
+      {app.evaluationHistory && app.evaluationHistory.length > 1 && (
+        <Card className="border-mr-navy/10">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold text-mr-navy flex items-center gap-2">
+              📜 Değerlendirme Geçmişi
+              <Badge variant="outline" className="text-[10px]">
+                {app.evaluationHistory.length} kayıt
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {(app.evaluationHistory as EvalHistoryRecord[]).map(
+                (hist, idx) => {
+                  const histReport = hist.report as EvalReport | null;
+                  const recInfo = histReport?.recommendation
+                    ? RECOMMENDATION_LABELS[histReport.recommendation]
+                    : null;
+
+                  return (
+                    <div
+                      key={hist.id}
+                      className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-3 py-2.5 rounded-lg border ${
+                        idx === 0
+                          ? "bg-emerald-50/50 border-emerald-200"
+                          : "bg-white border-gray-200"
+                      }`}
+                    >
+                      {/* Score */}
+                      <div className="shrink-0 w-12 text-center">
+                        {hist.status === "completed" ? (
+                          <span
+                            className={`inline-block text-sm font-bold ${
+                              hist.overallScore >= 70
+                                ? "text-emerald-600"
+                                : hist.overallScore >= 40
+                                  ? "text-amber-600"
+                                  : "text-red-600"
+                            }`}
+                          >
+                            {hist.overallScore}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0 space-y-0.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-medium text-mr-navy truncate">
+                            {hist.session?.label ||
+                              hist.evaluationLabel ||
+                              "Standart Değerlendirme"}
+                          </span>
+                          {idx === 0 && (
+                            <Badge className="bg-emerald-100 text-emerald-700 text-[9px] px-1.5 py-0">
+                              Son
+                            </Badge>
+                          )}
+                          {recInfo && (
+                            <Badge
+                              variant="outline"
+                              className={`text-[9px] px-1.5 py-0 ${recInfo.color}`}
+                            >
+                              {recInfo.label}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] text-mr-text-muted flex-wrap">
+                          {hist.createdBy && (
+                            <span>👤 {hist.createdBy.fullName}</span>
+                          )}
+                          {hist.evaluatedAt && (
+                            <span>
+                              📅{" "}
+                              {new Date(hist.evaluatedAt).toLocaleDateString(
+                                "tr-TR",
+                                {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                },
+                              )}
+                            </span>
+                          )}
+                          {hist.session?.description && (
+                            <span
+                              className="truncate max-w-[200px]"
+                              title={hist.session.description}
+                            >
+                              💬 {hist.session.description}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                },
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ═══════════════════ CANDIDATE INFO SECTIONS ═══════════════════ */}
       {/* Basic Contact Info */}

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiError } from "@/lib/utils";
+import { apiError, safeBigInt } from "@/lib/utils";
 import { hash } from "bcryptjs";
 
 // PUT /api/admin/users/:id — Kullanıcı güncelle
@@ -14,7 +14,8 @@ export async function PUT(
     const { fullName, email, username, role, permissions, isActive, password } =
       body;
 
-    const userId = BigInt(id);
+    const userId = safeBigInt(id);
+    if (!userId) return apiError("Geçersiz kullanıcı ID", 400);
 
     // Check user exists
     const existing = await prisma.adminUser.findUnique({
@@ -80,7 +81,8 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const userId = BigInt(id);
+    const userId = safeBigInt(id);
+    if (!userId) return apiError("Geçersiz kullanıcı ID", 400);
 
     const existing = await prisma.adminUser.findUnique({
       where: { id: userId },

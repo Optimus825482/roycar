@@ -307,7 +307,7 @@ export function ApplicationDetailModal({
             pollRef.current = null;
             setEvaluating(false);
             toast.error("Değerlendirme zaman aşımına uğradı");
-            queueMicrotask(() => fetchDetail());
+            fetchDetail();
           }
         }, 3000);
       } else {

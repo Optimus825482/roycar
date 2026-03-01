@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiError, apiSuccess } from "@/lib/utils";
+import { apiError, apiSuccess, safeBigInt } from "@/lib/utils";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
@@ -10,6 +10,8 @@ type Params = { params: Promise<{ id: string; qId: string }> };
 export async function POST(req: NextRequest, { params }: Params) {
   try {
     const { qId } = await params;
+    const questionId = safeBigInt(qId);
+    if (!questionId) return apiError("Geçersiz soru ID", 400);
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
 
@@ -30,7 +32,13 @@ export async function POST(req: NextRequest, { params }: Params) {
     const uploadDir = path.join(process.cwd(), "uploads", "question-images");
     await mkdir(uploadDir, { recursive: true });
 
-    const ext = file.name.split(".").pop() || "jpg";
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "gif"];
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      return apiError(
+        "Geçersiz dosya uzantısı. Sadece jpg, jpeg, png, webp, gif kabul edilir.",
+      );
+    }
     const fileName = `q${qId}-${Date.now()}.${ext}`;
     const filePath = path.join(uploadDir, fileName);
 
@@ -39,14 +47,14 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     // Mevcut en yüksek sortOrder
     const lastImg = await prisma.questionImage.findFirst({
-      where: { questionId: BigInt(qId) },
+      where: { questionId },
       orderBy: { sortOrder: "desc" },
       select: { sortOrder: true },
     });
 
     const image = await prisma.questionImage.create({
       data: {
-        questionId: BigInt(qId),
+        questionId,
         filePath: `uploads/question-images/${fileName}`,
         fileName: file.name,
         mimeType: file.type,

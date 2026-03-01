@@ -22,6 +22,8 @@ model AdminUser {
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   chatSessions ChatSession[]
+  createdSessions    EvaluationSession[] @relation("SessionCreator")
+  createdEvaluations Evaluation[]        @relation("EvaluationCreator")
 
   @@map("admin_users")
 }
@@ -101,6 +103,7 @@ model FormConfig {
   applications Application[]
   screeningCriteria ScreeningCriteria[]
 
+  @@index([isPublished, isActive])
   @@map("form_configs")
 }
 
@@ -200,6 +203,7 @@ model Application {
   @@index([departmentId])
   @@index([positionId])
   @@index([submittedAt])
+  @@index([fullName])
   @@map("applications")
 }
 
@@ -269,12 +273,16 @@ model EvaluationSession {
   description String?
   criteria    Json     @default("[]")
   status      String   @default("active")
+  createdById BigInt?  @map("created_by_id")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
+  createdBy    AdminUser? @relation("SessionCreator", fields: [createdById], references: [id], onDelete: SetNull)
   evaluations  Evaluation[]
   groupMembers CandidateGroupMember[]
 
+  @@index([status])
+  @@index([createdById])
   @@map("evaluation_sessions")
 }
 
@@ -291,12 +299,16 @@ model Evaluation {
   retryCount      Int       @default(0) @map("retry_count")
   customCriteria  Json?     @map("custom_criteria")
   evaluationLabel String?   @map("evaluation_label")
+  manualNote      String?   @map("manual_note")
+  finalDecision   String?   @map("final_decision")
+  createdById     BigInt?   @map("created_by_id")
   evaluatedAt     DateTime? @map("evaluated_at") @db.Timestamptz
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  application Application        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  session     EvaluationSession?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  application  Application        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  session      EvaluationSession?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  createdBy    AdminUser?          @relation("EvaluationCreator", fields: [createdById], references: [id], onDelete: SetNull)
   groupMembers CandidateGroupMember[]
 
   @@index([applicationId])
@@ -371,7 +383,7 @@ model ChatMessage {
 
   chatSession ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
 
-  @@index([chatSessionId])
+  @@index([chatSessionId, createdAt])
   @@map("chat_messages")
 }
 
@@ -404,6 +416,48 @@ model ImportLog {
 }
 
 
+// ─── Pozisyon Varsayılan Özellikleri ───
+
+model PositionDefault {
+  id               BigInt   @id @default(autoincrement())
+  category         String   // service, bar, banquet, room_service, management
+  level            Int      // 1=stratejik, 2=operasyonel, 3=icra
+  authorityScore   Int      @default(0) @map("authority_score")
+  guestInteraction Int      @default(0) @map("guest_interaction")
+  teamSize         Int      @default(1) @map("team_size")
+  skills           Json?    // { management, technical, social, physical, crisis }
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([category, level])
+  @@index([category])
+  @@map("position_defaults")
+}
+
+// ─── Pozisyon Şablonları (Seçilebilir Pozisyon Tipleri) ───
+
+model PositionTemplate {
+  id               BigInt   @id @default(autoincrement())
+  title            String
+  titleEn          String?  @map("title_en")
+  description      String?
+  category         String   @default("service")
+  level            Int      @default(3)
+  authorityScore   Int      @default(0) @map("authority_score")
+  guestInteraction Int      @default(0) @map("guest_interaction")
+  teamSize         Int      @default(1) @map("team_size")
+  skills           Json?
+  sortOrder        Int      @default(0) @map("sort_order")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([title])
+  @@index([category])
+  @@index([isActive])
+  @@map("position_templates")
+}
+
 // ─── Organizasyon Şeması ───
 
 model OrgPosition {
@@ -411,7 +465,7 @@ model OrgPosition {
   title             String
   titleEn           String?  @map("title_en")
   description       String?
-  category          String   @default("kitchen") // kitchen, service, bar, banquet, room_service, hygiene, management
+  category          String   @default("service") // service, bar, banquet, room_service, management
   level             Int      @default(3) // 1=stratejik, 2=operasyonel, 3=icra
   parentId          BigInt?  @map("parent_id")
   authorityScore    Int      @default(0) @map("authority_score") // 0-100

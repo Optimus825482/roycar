@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendStatusChangeEmail } from "@/services/email.service";
+import { safeBigInt } from "@/lib/utils";
 
 export async function POST(
   req: NextRequest,
@@ -14,7 +15,10 @@ export async function POST(
   }
 
   const { id } = await params;
-  const numId = BigInt(id);
+  const numId = safeBigInt(id);
+  if (!numId) {
+    return NextResponse.json({ error: "Geçersiz başvuru ID" }, { status: 400 });
+  }
 
   // Find application with required fields
   const application = await prisma.application.findUnique({

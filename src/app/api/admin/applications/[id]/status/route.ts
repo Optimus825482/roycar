@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiError } from "@/lib/utils";
+import { apiError, safeBigInt } from "@/lib/utils";
 
 const VALID_STATUSES = ["new", "reviewed", "shortlisted", "rejected", "hired"];
 
@@ -11,6 +11,9 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
+    const appId = safeBigInt(id);
+    if (!appId) return apiError("Geçersiz başvuru ID", 400);
+
     const { status } = await req.json();
 
     if (!status || !VALID_STATUSES.includes(status)) {
@@ -20,7 +23,7 @@ export async function PATCH(
     }
 
     const application = await prisma.application.update({
-      where: { id: BigInt(id) },
+      where: { id: appId },
       data: { status },
       select: { id: true, applicationNo: true, status: true },
     });

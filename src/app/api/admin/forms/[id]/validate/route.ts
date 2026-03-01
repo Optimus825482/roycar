@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiError, apiSuccess } from "@/lib/utils";
+import { apiError, apiSuccess, safeBigInt } from "@/lib/utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -16,7 +16,8 @@ interface ValidationResult {
 export async function POST(_req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
-    const formId = BigInt(id);
+    const formId = safeBigInt(id);
+    if (!formId) return apiError("Geçersiz form ID", 400);
 
     const form = await prisma.formConfig.findUnique({
       where: { id: formId },

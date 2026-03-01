@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiError, apiSuccess } from "@/lib/utils";
+import { apiError, apiSuccess, safeBigInt } from "@/lib/utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -24,8 +24,11 @@ export async function PUT(req: NextRequest, { params }: Params) {
       isActive,
     } = body;
 
+    const pid = safeBigInt(id);
+    if (!pid) return apiError("Geçersiz pozisyon ID", 400);
+
     const position = await prisma.orgPosition.update({
-      where: { id: BigInt(id) },
+      where: { id: pid },
       data: {
         ...(title !== undefined && { title: title.trim() }),
         ...(titleEn !== undefined && { titleEn: titleEn?.trim() || null }),
@@ -57,7 +60,10 @@ export async function PUT(req: NextRequest, { params }: Params) {
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
-    await prisma.orgPosition.delete({ where: { id: BigInt(id) } });
+    const did = safeBigInt(id);
+    if (!did) return apiError("Geçersiz pozisyon ID", 400);
+
+    await prisma.orgPosition.delete({ where: { id: did } });
     return Response.json(apiSuccess(null, "Pozisyon silindi."));
   } catch (err) {
     console.error("Pozisyon silme hatası:", err);

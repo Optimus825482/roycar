@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiError, apiSuccess } from "@/lib/utils";
+import { apiError, apiSuccess, safeBigInt } from "@/lib/utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -8,7 +8,8 @@ type Params = { params: Promise<{ id: string }> };
 export async function POST(req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
-    const formId = BigInt(id);
+    const formId = safeBigInt(id);
+    if (!formId) return apiError("Geçersiz form ID", 400);
     const body = await req.json();
 
     // Ad, e-posta, telefon soruları engelle — bunlar başvuru formunda otomatik alınıyor

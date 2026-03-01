@@ -3,7 +3,7 @@ import { BrandLogo } from "@/components/shared/BrandLogo";
 import { prisma } from "@/lib/prisma";
 import { FileUp, ArrowRight, Shield } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60; // ISR — 60 saniyede bir revalidate
 
 async function getActiveForm() {
   try {

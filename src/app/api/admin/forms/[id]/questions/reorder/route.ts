@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiError, apiSuccess } from "@/lib/utils";
+import { apiError, apiSuccess, safeBigInt } from "@/lib/utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -15,11 +15,17 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       return apiError("orderedIds dizisi gereklidir.");
     }
 
+    // Validate all IDs before transaction
+    const bigIds = orderedIds.map((qId) => safeBigInt(qId));
+    if (bigIds.some((id) => id === null)) {
+      return apiError("Geçersiz soru ID formatı.", 400);
+    }
+
     // Batch update — her soru için yeni sortOrder
     await prisma.$transaction(
-      orderedIds.map((qId, index) =>
+      bigIds.map((qId, index) =>
         prisma.question.update({
-          where: { id: BigInt(qId) },
+          where: { id: qId! },
           data: { sortOrder: index },
         }),
       ),

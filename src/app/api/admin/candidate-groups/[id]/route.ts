@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { safeBigInt } from "@/lib/utils";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -7,8 +8,16 @@ type Ctx = { params: Promise<{ id: string }> };
 export async function GET(_req: NextRequest, ctx: Ctx) {
   try {
     const { id } = await ctx.params;
+    const groupId = safeBigInt(id);
+    if (!groupId) {
+      return NextResponse.json(
+        { success: false, error: "Geçersiz grup ID" },
+        { status: 400 },
+      );
+    }
+
     const group = await prisma.candidateGroup.findUnique({
-      where: { id: BigInt(id) },
+      where: { id: groupId },
       include: {
         members: {
           orderBy: { addedAt: "desc" },
@@ -104,13 +113,21 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const body = await req.json();
     const { name, description } = body;
 
+    const patchId = safeBigInt(id);
+    if (!patchId) {
+      return NextResponse.json(
+        { success: false, error: "Geçersiz grup ID" },
+        { status: 400 },
+      );
+    }
+
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name.trim();
     if (description !== undefined)
       updateData.description = description?.trim() || null;
 
     const group = await prisma.candidateGroup.update({
-      where: { id: BigInt(id) },
+      where: { id: patchId },
       data: updateData,
     });
 
@@ -135,7 +152,15 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 export async function DELETE(_req: NextRequest, ctx: Ctx) {
   try {
     const { id } = await ctx.params;
-    await prisma.candidateGroup.delete({ where: { id: BigInt(id) } });
+    const groupId = safeBigInt(id);
+    if (!groupId) {
+      return NextResponse.json(
+        { success: false, error: "Geçersiz grup ID" },
+        { status: 400 },
+      );
+    }
+
+    await prisma.candidateGroup.delete({ where: { id: groupId } });
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Candidate group delete error:", err);

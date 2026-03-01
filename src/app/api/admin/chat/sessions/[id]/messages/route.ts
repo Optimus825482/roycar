@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { apiError } from "@/lib/utils";
+import { apiError, safeBigInt } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { stripThinkingTags } from "@/lib/ai-client";
@@ -60,7 +60,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const messages = await getChatMessages(BigInt(id));
+    const chatId = safeBigInt(id);
+    if (!chatId) return apiError("Geçersiz sohbet ID", 400);
+
+    const messages = await getChatMessages(chatId);
     const serialized = JSON.parse(
       JSON.stringify(messages, (_k, v) =>
         typeof v === "bigint" ? v.toString() : v,
@@ -83,7 +86,8 @@ export async function POST(
     const { message, stream: useStream } = await req.json();
     if (!message?.trim()) return apiError("Mesaj boş olamaz.");
 
-    const sessionId = BigInt(id);
+    const sessionId = safeBigInt(id);
+    if (!sessionId) return apiError("Geçersiz sohbet ID", 400);
     const adminName = await getAdminName(req);
 
     // Non-streaming fallback

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiError, apiSuccess } from "@/lib/utils";
+import { apiError, apiSuccess, safeBigInt } from "@/lib/utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -8,8 +8,11 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
+    const formId = safeBigInt(id);
+    if (!formId) return apiError("Geçersiz form ID", 400);
+
     const form = await prisma.formConfig.findUnique({
-      where: { id: BigInt(id) },
+      where: { id: formId },
       include: {
         questions: {
           orderBy: { sortOrder: "asc" },
@@ -40,8 +43,11 @@ export async function PUT(req: NextRequest, { params }: Params) {
     const body = await req.json();
     const { title, mode } = body;
 
+    const fid = safeBigInt(id);
+    if (!fid) return apiError("Geçersiz form ID", 400);
+
     const form = await prisma.formConfig.update({
-      where: { id: BigInt(id) },
+      where: { id: fid },
       data: {
         ...(title && { title: title.trim() }),
         ...(mode && { mode }),
@@ -59,7 +65,10 @@ export async function PUT(req: NextRequest, { params }: Params) {
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
-    await prisma.formConfig.delete({ where: { id: BigInt(id) } });
+    const did = safeBigInt(id);
+    if (!did) return apiError("Geçersiz form ID", 400);
+
+    await prisma.formConfig.delete({ where: { id: did } });
     return Response.json(apiSuccess(null, "Form silindi."));
   } catch (err) {
     console.error("Form silme hatası:", err);

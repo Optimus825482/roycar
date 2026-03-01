@@ -224,7 +224,6 @@ function validateSql(sql: string): { valid: boolean; error?: string } {
 
   // Check forbidden keywords
   for (const kw of FORBIDDEN_KEYWORDS) {
-    // Check as whole word (with word boundaries for SQL keywords)
     const regex = new RegExp(`\\b${kw}\\b`, "i");
     if (regex.test(sql)) {
       return { valid: false, error: `Yasaklı anahtar kelime: ${kw}` };
@@ -235,6 +234,16 @@ function validateSql(sql: string): { valid: boolean; error?: string } {
   const withoutStrings = sql.replace(/'[^']*'/g, "");
   if (withoutStrings.includes(";")) {
     return { valid: false, error: "Birden fazla SQL ifadesi yasak." };
+  }
+
+  // Validate table whitelist — extract table names from FROM/JOIN clauses
+  const tableRegex = /\b(?:FROM|JOIN)\s+([a-z_][a-z0-9_]*)/gi;
+  let tableMatch;
+  while ((tableMatch = tableRegex.exec(sql)) !== null) {
+    const tableName = tableMatch[1].toLowerCase();
+    if (!ALLOWED_TABLES.includes(tableName)) {
+      return { valid: false, error: `İzin verilmeyen tablo: ${tableName}` };
+    }
   }
 
   return { valid: true };
@@ -387,7 +396,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("Evaluation AI assist error:", err);
-    const errMsg = err instanceof Error ? err.message : "AI yanıt veremedi.";
-    return apiError(errMsg, 500);
+    return apiError("AI yanıt veremedi. Lütfen tekrar deneyin.", 500);
   }
 }

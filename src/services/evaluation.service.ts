@@ -100,6 +100,7 @@ export async function evaluateApplication(
   applicationId: bigint,
   customCriteria?: EvalCriteria,
   sessionId?: bigint,
+  createdById?: bigint,
 ): Promise<void> {
   // Fetch application with department and questions
   const application = await prisma.application.findUnique({
@@ -137,6 +138,7 @@ export async function evaluateApplication(
     data: {
       applicationId,
       sessionId: sessionId || null,
+      createdById: createdById || null,
       overallScore: 0,
       status: "pending",
       report: {},
@@ -240,8 +242,14 @@ export function triggerEvaluation(
   applicationId: bigint,
   customCriteria?: EvalCriteria,
   sessionId?: bigint,
+  createdById?: bigint,
 ): void {
-  evaluateApplication(applicationId, customCriteria, sessionId).catch((err) => {
+  evaluateApplication(
+    applicationId,
+    customCriteria,
+    sessionId,
+    createdById,
+  ).catch((err) => {
     console.error(`Değerlendirme hatası (app: ${applicationId}):`, err);
   });
 }

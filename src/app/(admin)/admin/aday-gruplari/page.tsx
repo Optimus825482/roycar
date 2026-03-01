@@ -9,6 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { AppLoader } from "@/components/shared/AppLoader";
 import {
+  exportListToPDF,
+  exportListToExcel,
+  printListEvaluation,
+} from "@/lib/export-utils";
+import type { ListExportItem } from "@/lib/export-utils";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -226,6 +232,22 @@ export default function CandidateGroupsPage() {
       minute: "2-digit",
     });
 
+  // Convert group members to export format
+  const getExportItems = useCallback((): ListExportItem[] => {
+    if (!selectedGroup) return [];
+    return selectedGroup.members.map((m) => ({
+      fullName: m.fullName,
+      email: m.email,
+      phone: m.phone || "",
+      department: m.department || "—",
+      positionTitle: "",
+      overallScore: m.evaluation?.overallScore ?? 0,
+      recommendation: null,
+      finalDecision: null,
+      manualNote: m.notes,
+    }));
+  }, [selectedGroup]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -356,17 +378,67 @@ export default function CandidateGroupsPage() {
                       {selectedGroup.members.length} aday
                     </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setEditName(selectedGroup.name);
-                      setEditDesc(selectedGroup.description || "");
-                      setShowEdit(true);
-                    }}
-                  >
-                    ✏️ Düzenle
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const items = getExportItems();
+                        if (items.length === 0) {
+                          toast.warning("Dışa aktarılacak aday yok");
+                          return;
+                        }
+                        printListEvaluation(items);
+                      }}
+                      disabled={selectedGroup.members.length === 0}
+                      title="Yazdır"
+                    >
+                      🖨️ Yazdır
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const items = getExportItems();
+                        if (items.length === 0) {
+                          toast.warning("Dışa aktarılacak aday yok");
+                          return;
+                        }
+                        exportListToPDF(items);
+                      }}
+                      disabled={selectedGroup.members.length === 0}
+                      title="PDF İndir"
+                    >
+                      📄 PDF
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const items = getExportItems();
+                        if (items.length === 0) {
+                          toast.warning("Dışa aktarılacak aday yok");
+                          return;
+                        }
+                        void exportListToExcel(items);
+                      }}
+                      disabled={selectedGroup.members.length === 0}
+                      title="Excel İndir"
+                    >
+                      📊 Excel
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditName(selectedGroup.name);
+                        setEditDesc(selectedGroup.description || "");
+                        setShowEdit(true);
+                      }}
+                    >
+                      ✏️ Düzenle
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>

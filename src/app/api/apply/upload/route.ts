@@ -19,7 +19,13 @@ export async function POST(req: NextRequest) {
       return apiError("Dosya boyutu 5MB'ı aşamaz.");
     }
 
-    const ext = file.name.split(".").pop() || "jpg";
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp"];
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      return apiError(
+        "Geçersiz dosya uzantısı. Sadece jpg, jpeg, png, webp kabul edilir.",
+      );
+    }
     const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const uploadDir = path.join(process.cwd(), "uploads", "photos");
     await mkdir(uploadDir, { recursive: true });

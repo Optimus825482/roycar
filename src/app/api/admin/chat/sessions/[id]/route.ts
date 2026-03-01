@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiError, apiSuccess } from "@/lib/utils";
+import { apiError, apiSuccess, safeBigInt } from "@/lib/utils";
 
 // DELETE /api/admin/chat/sessions/:id — Sohbeti sil
 export async function DELETE(
@@ -9,7 +9,10 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    await prisma.chatSession.delete({ where: { id: BigInt(id) } });
+    const chatId = safeBigInt(id);
+    if (!chatId) return apiError("Geçersiz sohbet ID", 400);
+
+    await prisma.chatSession.delete({ where: { id: chatId } });
     return Response.json(apiSuccess({ deleted: true }));
   } catch (err) {
     console.error("Chat session delete error:", err);
@@ -24,9 +27,12 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
+    const chatId = safeBigInt(id);
+    if (!chatId) return apiError("Geçersiz sohbet ID", 400);
+
     const { isArchived } = await req.json();
     const session = await prisma.chatSession.update({
-      where: { id: BigInt(id) },
+      where: { id: chatId },
       data: { isArchived: !!isArchived },
     });
     const serialized = JSON.parse(

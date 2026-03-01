@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiError, apiSuccess } from "@/lib/utils";
+import { apiError, apiSuccess, safeBigInt } from "@/lib/utils";
 
 type Params = { params: Promise<{ id: string; qId: string }> };
 
@@ -8,10 +8,12 @@ type Params = { params: Promise<{ id: string; qId: string }> };
 export async function PUT(req: NextRequest, { params }: Params) {
   try {
     const { qId } = await params;
+    const questionId = safeBigInt(qId);
+    if (!questionId) return apiError("Geçersiz soru ID", 400);
     const body = await req.json();
 
     const question = await prisma.question.update({
-      where: { id: BigInt(qId) },
+      where: { id: questionId },
       data: {
         ...(body.questionText !== undefined && {
           questionText: body.questionText,
@@ -42,7 +44,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     const { qId } = await params;
-    await prisma.question.delete({ where: { id: BigInt(qId) } });
+    const questionId = safeBigInt(qId);
+    if (!questionId) return apiError("Geçersiz soru ID", 400);
+    await prisma.question.delete({ where: { id: questionId } });
     return Response.json(apiSuccess(null, "Soru silindi."));
   } catch (err) {
     console.error("Soru silme hatası:", err);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { safeBigInt } from "@/lib/utils";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -7,7 +8,13 @@ type Ctx = { params: Promise<{ id: string }> };
 export async function POST(req: NextRequest, ctx: Ctx) {
   try {
     const { id } = await ctx.params;
-    const groupId = BigInt(id);
+    const groupId = safeBigInt(id);
+    if (!groupId) {
+      return NextResponse.json(
+        { success: false, error: "Geçersiz grup ID" },
+        { status: 400 },
+      );
+    }
     const body = await req.json();
 
     // Tek veya toplu ekleme desteği
@@ -21,33 +28,67 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const results = [];
     const errors = [];
 
-    for (const item of items) {
-      try {
-        const member = await prisma.candidateGroupMember.create({
-          data: {
-            groupId,
-            applicationId: BigInt(item.applicationId),
-            evaluationSessionId: item.evaluationSessionId
-              ? BigInt(item.evaluationSessionId)
-              : null,
-            evaluationId: item.evaluationId ? BigInt(item.evaluationId) : null,
-            notes: item.notes || null,
-          },
-        });
-        results.push({
-          id: member.id.toString(),
-          applicationId: item.applicationId,
-        });
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        // Unique constraint violation — zaten grupta
-        if (msg.includes("Unique constraint")) {
+    // Use createMany for batch insert, then handle unique constraint errors individually
+    const createData = items.map((item) => ({
+      groupId,
+      applicationId: BigInt(item.applicationId),
+      evaluationSessionId: item.evaluationSessionId
+        ? BigInt(item.evaluationSessionId)
+        : null,
+      evaluationId: item.evaluationId ? BigInt(item.evaluationId) : null,
+      notes: item.notes || null,
+    }));
+
+    // Try batch insert first, fall back to individual on conflict
+    try {
+      const batchResult = await prisma.candidateGroupMember.createMany({
+        data: createData,
+        skipDuplicates: true,
+      });
+      // All non-duplicate items were inserted
+      for (const item of items) {
+        results.push({ id: "batch", applicationId: item.applicationId });
+      }
+      if (batchResult.count < items.length) {
+        const skipped = items.length - batchResult.count;
+        for (let i = 0; i < skipped; i++) {
           errors.push({
-            applicationId: item.applicationId,
+            applicationId: "unknown",
             error: "Bu aday zaten grupta",
           });
-        } else {
-          errors.push({ applicationId: item.applicationId, error: msg });
+        }
+      }
+    } catch {
+      // Fallback to individual inserts if batch fails
+      for (const item of items) {
+        try {
+          const member = await prisma.candidateGroupMember.create({
+            data: {
+              groupId,
+              applicationId: BigInt(item.applicationId),
+              evaluationSessionId: item.evaluationSessionId
+                ? BigInt(item.evaluationSessionId)
+                : null,
+              evaluationId: item.evaluationId
+                ? BigInt(item.evaluationId)
+                : null,
+              notes: item.notes || null,
+            },
+          });
+          results.push({
+            id: member.id.toString(),
+            applicationId: item.applicationId,
+          });
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e);
+          if (msg.includes("Unique constraint")) {
+            errors.push({
+              applicationId: item.applicationId,
+              error: "Bu aday zaten grupta",
+            });
+          } else {
+            errors.push({ applicationId: item.applicationId, error: msg });
+          }
         }
       }
     }
@@ -69,13 +110,26 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 export async function DELETE(req: NextRequest, ctx: Ctx) {
   try {
     const { id } = await ctx.params;
-    const groupId = BigInt(id);
+    const groupId = safeBigInt(id);
+    if (!groupId) {
+      return NextResponse.json(
+        { success: false, error: "Geçersiz grup ID" },
+        { status: 400 },
+      );
+    }
     const body = await req.json();
     const { memberId, applicationId } = body;
 
     if (memberId) {
+      const mid = safeBigInt(String(memberId));
+      if (!mid) {
+        return NextResponse.json(
+          { success: false, error: "Geçersiz üye ID" },
+          { status: 400 },
+        );
+      }
       await prisma.candidateGroupMember.delete({
-        where: { id: BigInt(memberId) },
+        where: { id: mid },
       });
     } else if (applicationId) {
       await prisma.candidateGroupMember.delete({

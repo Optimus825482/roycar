@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiError } from "@/lib/utils";
+import { apiError, safeBigInt } from "@/lib/utils";
 import { auth } from "@/lib/auth";
 
 type Params = { params: Promise<{ id: string }> };
@@ -21,7 +21,8 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     }
 
     const { id } = await params;
-    const logId = BigInt(id);
+    const logId = safeBigInt(id);
+    if (!logId) return apiError("Geçersiz aktarım ID", 400);
 
     // Import log'u kontrol et
     const importLog = await prisma.importLog.findUnique({

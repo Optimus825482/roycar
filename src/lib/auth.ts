@@ -73,5 +73,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
+  secret:
+    process.env.NEXTAUTH_SECRET ||
+    process.env.AUTH_SECRET ||
+    (() => {
+      if (process.env.NODE_ENV === "production") {
+        throw new Error(
+          "NEXTAUTH_SECRET or AUTH_SECRET must be set in production",
+        );
+      }
+      return "dev-secret-not-for-production";
+    })(),
 });

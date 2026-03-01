@@ -20,7 +20,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const bigIntIds = applicationIds.map((id) => BigInt(id));
+  const bigIntIds = applicationIds.map((id) => {
+    if (!/^\d+$/.test(id)) throw new Error(`Geçersiz ID: ${id}`);
+    return BigInt(id);
+  });
 
   const applications = await prisma.application.findMany({
     where: { id: { in: bigIntIds } },
@@ -34,18 +37,15 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const results: { id: string; success: boolean; error?: string }[] = [];
-
-  for (const app of applications) {
+  // Send emails in parallel instead of sequential
+  const emailPromises = applications.map(async (app) => {
     if (!app.email) {
-      results.push({
+      return {
         id: app.id.toString(),
         success: false,
         error: "E-posta adresi yok",
-      });
-      continue;
+      };
     }
-
     try {
       await sendStatusChangeEmail({
         email: app.email,
@@ -54,16 +54,24 @@ export async function POST(req: NextRequest) {
         departmentName: app.department?.name ?? "Bilinmiyor",
         status: "evaluated",
       });
-      results.push({ id: app.id.toString(), success: true });
+      return { id: app.id.toString(), success: true };
     } catch (err) {
       console.error(`Batch-notify başarısız [${app.id}]:`, err);
-      results.push({
+      return {
         id: app.id.toString(),
         success: false,
         error: "Gönderme hatası",
-      });
+      };
     }
-  }
+  });
+
+  const results = await Promise.allSettled(emailPromises).then((settled) =>
+    settled.map((r) =>
+      r.status === "fulfilled"
+        ? r.value
+        : { id: "?", success: false, error: "Beklenmeyen hata" },
+    ),
+  );
 
   const sent = results.filter((r) => r.success).length;
   const failed = results.filter((r) => !r.success).length;

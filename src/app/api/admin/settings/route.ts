@@ -95,14 +95,16 @@ export async function PATCH(req: NextRequest) {
       return apiError("Güncellenecek ayar bulunamadı.");
     }
 
-    // Upsert all settings
-    for (const { key, value } of updates) {
-      await prisma.systemSetting.upsert({
-        where: { key },
-        update: { value },
-        create: { key, value },
-      });
-    }
+    // Upsert all settings in a single transaction
+    await prisma.$transaction(
+      updates.map(({ key, value }) =>
+        prisma.systemSetting.upsert({
+          where: { key },
+          update: { value },
+          create: { key, value },
+        }),
+      ),
+    );
 
     // Invalidate caches
     invalidateProviderCache();

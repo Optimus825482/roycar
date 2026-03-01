@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,11 +21,9 @@ import {
   Save,
   ExternalLink,
   X,
-  ChefHat,
   Wine,
   UtensilsCrossed,
   Sparkles,
-  Shield,
   Crown,
   BedDouble,
   Users,
@@ -34,6 +32,7 @@ import {
   Pencil,
   Trash2,
   Building2,
+  ChefHat,
 } from "lucide-react";
 
 // ─── Types ───
@@ -56,6 +55,20 @@ type OrgPosition = {
 
 type TreePosition = OrgPosition & { children: TreePosition[] };
 
+type PositionTemplate = {
+  id: string;
+  title: string;
+  titleEn: string | null;
+  description: string | null;
+  category: string;
+  level: number;
+  authorityScore: number;
+  guestInteraction: number;
+  teamSize: number;
+  skills: Record<string, number> | null;
+  sortOrder: number;
+};
+
 // ─── Constants ───
 
 const CATEGORIES = [
@@ -65,7 +78,6 @@ const CATEGORIES = [
   { value: "bar", label: "Bar" },
   { value: "banquet", label: "Ziyafet" },
   { value: "room_service", label: "Oda Servisi" },
-  { value: "hygiene", label: "Hijyen" },
 ];
 
 const LEVELS = [
@@ -84,7 +96,12 @@ const CAT_CONFIG: Record<
     bg: "#FEF3C7",
     icon: Crown,
   },
-  kitchen: { label: "Mutfak", color: "#0F4C75", bg: "#DBEAFE", icon: ChefHat },
+  kitchen: {
+    label: "Mutfak",
+    color: "#DC2626",
+    bg: "#FEE2E2",
+    icon: ChefHat,
+  },
   service: {
     label: "Servis",
     color: "#059669",
@@ -104,7 +121,6 @@ const CAT_CONFIG: Record<
     bg: "#EDE9FE",
     icon: BedDouble,
   },
-  hygiene: { label: "Hijyen", color: "#475569", bg: "#F1F5F9", icon: Shield },
 };
 
 const LEVEL_COLORS: Record<number, string> = {
@@ -125,7 +141,7 @@ const EMPTY_FORM = {
   title: "",
   titleEn: "",
   description: "",
-  category: "kitchen",
+  category: "service",
   level: 3,
   parentId: "",
   authorityScore: 0,
@@ -156,7 +172,7 @@ function buildTree(positions: OrgPosition[]): TreePosition[] {
 
 // ─── Tree Node ───
 
-function AdminTreeNode({
+const AdminTreeNode = memo(function AdminTreeNode({
   node,
   depth = 0,
   selectedId,
@@ -170,7 +186,7 @@ function AdminTreeNode({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const cat = CAT_CONFIG[node.category] || CAT_CONFIG.kitchen;
+  const cat = CAT_CONFIG[node.category] || CAT_CONFIG.service;
   const Icon = cat.icon;
   const hasChildren = node.children.length > 0;
   const isSelected = selectedId === node.id;
@@ -269,7 +285,7 @@ function AdminTreeNode({
       )}
     </div>
   );
-}
+});
 
 // ─── Detail Panel ───
 
@@ -284,7 +300,7 @@ function DetailPanel({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const cat = CAT_CONFIG[position.category] || CAT_CONFIG.kitchen;
+  const cat = CAT_CONFIG[position.category] || CAT_CONFIG.service;
   const Icon = cat.icon;
   const catLabel =
     CATEGORIES.find((c) => c.value === position.category)?.label ||
@@ -413,6 +429,8 @@ export default function AdminOrgChartPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [templates, setTemplates] = useState<PositionTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
 
   const tree = useMemo(() => buildTree(positions), [positions]);
   const totalStaff = useMemo(
@@ -432,12 +450,68 @@ export default function AdminOrgChartPage() {
     }
   }, []);
 
+  const fetchTemplates = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/org-chart/defaults");
+      const json = await res.json();
+      if (json.success) setTemplates(json.data as PositionTemplate[]);
+    } catch {
+      console.error("Şablonlar yüklenemedi");
+    }
+  }, []);
+
   useEffect(() => {
     fetchPositions();
-  }, [fetchPositions]);
+    fetchTemplates();
+  }, [fetchPositions, fetchTemplates]);
+
+  // Template seçildiğinde formu doldur
+  const handleTemplateSelect = useCallback(
+    (templateId: string) => {
+      setSelectedTemplateId(templateId);
+      if (!templateId) {
+        setForm(EMPTY_FORM);
+        return;
+      }
+      const tpl = templates.find((t) => t.id === templateId);
+      if (!tpl) return;
+      setForm({
+        title: tpl.title,
+        titleEn: tpl.titleEn || "",
+        description: tpl.description || "",
+        category: tpl.category,
+        level: tpl.level,
+        parentId: "",
+        authorityScore: tpl.authorityScore,
+        guestInteraction: tpl.guestInteraction,
+        teamSize: tpl.teamSize,
+        skills: {
+          ...EMPTY_FORM.skills,
+          ...(tpl.skills as Record<string, number>),
+        },
+        sortOrder: tpl.sortOrder,
+      });
+    },
+    [templates],
+  );
+
+  // Kategoriye göre template'leri grupla (CATEGORIES sırasına göre)
+  const groupedTemplates = useMemo(() => {
+    const groups: { label: string; items: PositionTemplate[] }[] = [];
+    for (const cat of CATEGORIES) {
+      const items = templates
+        .filter((t) => t.category === cat.value)
+        .sort((a, b) => a.level - b.level || a.sortOrder - b.sortOrder);
+      if (items.length > 0) {
+        groups.push({ label: cat.label, items });
+      }
+    }
+    return groups;
+  }, [templates]);
 
   const openCreate = useCallback(() => {
     setEditingId(null);
+    setSelectedTemplateId("");
     setForm(EMPTY_FORM);
     setDialogOpen(true);
   }, []);
@@ -627,88 +701,61 @@ export default function AdminOrgChartPage() {
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
-            <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
-                Pozisyon Adı *
-              </label>
-              <Input
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="Örn: Şef Aşçıbaşı"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
-                İngilizce Adı
-              </label>
-              <Input
-                value={form.titleEn}
-                onChange={(e) => setForm({ ...form, titleEn: e.target.value })}
-                placeholder="Örn: Executive Chef"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
-                Açıklama
-              </label>
-              <textarea
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={2}
-                value={form.description}
-                onChange={(e) =>
-                  setForm({ ...form, description: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            {/* Template seçici — sadece yeni pozisyon modunda */}
+            {!editingId && (
               <div>
                 <label className="text-xs font-medium text-gray-700 mb-1 block">
-                  Kategori
+                  Pozisyon Tipi Seçin *
                 </label>
                 <Select
-                  value={form.category}
-                  onValueChange={(v) => setForm({ ...form, category: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((c) => (
-                      <SelectItem key={c.value} value={c.value}>
-                        {c.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">
-                  Seviye
-                </label>
-                <Select
-                  value={String(form.level)}
+                  value={selectedTemplateId || "__none__"}
                   onValueChange={(v) =>
-                    setForm({ ...form, level: parseInt(v) })
+                    handleTemplateSelect(v === "__none__" ? "" : v)
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Pozisyon seçin..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {LEVELS.map((l) => (
-                      <SelectItem key={l.value} value={String(l.value)}>
-                        {l.label}
-                      </SelectItem>
+                    <SelectItem value="__none__">— Pozisyon seçin —</SelectItem>
+                    {groupedTemplates.map(({ label, items }) => (
+                      <div key={label}>
+                        <div className="px-2 py-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider border-t border-gray-100 mt-1 first:mt-0 first:border-0">
+                          {label}
+                        </div>
+                        {items.map((tpl) => {
+                          const indent =
+                            tpl.level === 1
+                              ? ""
+                              : tpl.level === 2
+                                ? "  "
+                                : "    ";
+                          const prefix =
+                            tpl.level === 1
+                              ? "★ "
+                              : tpl.level === 2
+                                ? "▸ "
+                                : "· ";
+                          return (
+                            <SelectItem key={tpl.id} value={tpl.id}>
+                              {indent}
+                              {prefix}
+                              {tpl.title}
+                              {tpl.titleEn ? ` (${tpl.titleEn})` : ""}
+                            </SelectItem>
+                          );
+                        })}
+                      </div>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            </div>
+            )}
 
+            {/* Üst Pozisyon — her zaman göster */}
             <div>
               <label className="text-xs font-medium text-gray-700 mb-1 block">
-                Üst Pozisyon
+                Üst Pozisyon (Nereye Eklenecek?)
               </label>
               <Select
                 value={form.parentId || "__none__"}
@@ -730,94 +777,194 @@ export default function AdminOrgChartPage() {
               </Select>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">
-                  Yetki Skoru
-                </label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={form.authorityScore}
-                  onChange={(e) =>
-                    setForm({ ...form, authorityScore: +e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">
-                  Misafir Etk.
-                </label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={form.guestInteraction}
-                  onChange={(e) =>
-                    setForm({ ...form, guestInteraction: +e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">
-                  Ekip Boyutu
-                </label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={form.teamSize}
-                  onChange={(e) =>
-                    setForm({ ...form, teamSize: +e.target.value })
-                  }
-                />
-              </div>
-            </div>
+            {/* Seçim yapıldıysa veya düzenleme modundaysa detayları göster */}
+            {(editingId || selectedTemplateId) && (
+              <>
+                <div className="border-t border-gray-100 pt-3">
+                  <p className="text-[11px] text-gray-500 mb-3">
+                    Aşağıdaki değerler otomatik dolduruldu. İsterseniz
+                    değiştirebilirsiniz.
+                  </p>
+                </div>
 
-            <div>
-              <label className="text-xs font-medium text-gray-700 mb-2 block">
-                Yetkinlikler (0-100)
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {Object.entries(SKILL_LABELS).map(([key, label]) => (
-                  <div key={key} className="flex items-center gap-2">
-                    <span className="text-xs text-gray-600 w-20">{label}</span>
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">
+                    Pozisyon Adı *
+                  </label>
+                  <Input
+                    value={form.title}
+                    onChange={(e) =>
+                      setForm({ ...form, title: e.target.value })
+                    }
+                    placeholder="Örn: Şef Aşçıbaşı"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">
+                    İngilizce Adı
+                  </label>
+                  <Input
+                    value={form.titleEn}
+                    onChange={(e) =>
+                      setForm({ ...form, titleEn: e.target.value })
+                    }
+                    placeholder="Örn: Executive Chef"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">
+                    Açıklama
+                  </label>
+                  <textarea
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={2}
+                    value={form.description}
+                    onChange={(e) =>
+                      setForm({ ...form, description: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 mb-1 block">
+                      Kategori
+                    </label>
+                    <Select
+                      value={form.category}
+                      onValueChange={(v) => setForm({ ...form, category: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES.map((c) => (
+                          <SelectItem key={c.value} value={c.value}>
+                            {c.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 mb-1 block">
+                      Seviye
+                    </label>
+                    <Select
+                      value={String(form.level)}
+                      onValueChange={(v) =>
+                        setForm({ ...form, level: parseInt(v) })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LEVELS.map((l) => (
+                          <SelectItem key={l.value} value={String(l.value)}>
+                            {l.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 mb-1 block">
+                      Yetki Skoru
+                    </label>
                     <Input
                       type="number"
                       min={0}
                       max={100}
-                      className="h-8 text-xs"
-                      value={form.skills[key as keyof typeof form.skills]}
+                      value={form.authorityScore}
                       onChange={(e) =>
-                        setForm({
-                          ...form,
-                          skills: { ...form.skills, [key]: +e.target.value },
-                        })
+                        setForm({ ...form, authorityScore: +e.target.value })
                       }
                     />
                   </div>
-                ))}
-              </div>
-            </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 mb-1 block">
+                      Misafir Etk.
+                    </label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={form.guestInteraction}
+                      onChange={(e) =>
+                        setForm({ ...form, guestInteraction: +e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 mb-1 block">
+                      Ekip Boyutu
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={form.teamSize}
+                      onChange={(e) =>
+                        setForm({ ...form, teamSize: +e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
-                Sıralama
-              </label>
-              <Input
-                type="number"
-                min={0}
-                value={form.sortOrder}
-                onChange={(e) =>
-                  setForm({ ...form, sortOrder: +e.target.value })
-                }
-              />
-            </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-2 block">
+                    Yetkinlikler (0-100)
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.entries(SKILL_LABELS).map(([key, label]) => (
+                      <div key={key} className="flex items-center gap-2">
+                        <span className="text-xs text-gray-600 w-20">
+                          {label}
+                        </span>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          className="h-8 text-xs"
+                          value={form.skills[key as keyof typeof form.skills]}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              skills: {
+                                ...form.skills,
+                                [key]: +e.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">
+                    Sıralama
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.sortOrder}
+                    onChange={(e) =>
+                      setForm({ ...form, sortOrder: +e.target.value })
+                    }
+                  />
+                </div>
+              </>
+            )}
 
             <div className="flex gap-2 pt-2">
               <Button
                 onClick={handleSave}
-                disabled={saving}
+                disabled={saving || (!editingId && !selectedTemplateId)}
                 className="flex-1 gap-1"
               >
                 <Save className="w-4 h-4" />

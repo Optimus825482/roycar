@@ -1,18 +1,17 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, memo } from "react";
 import {
   Users,
-  ChefHat,
   Wine,
   UtensilsCrossed,
   Sparkles,
-  Shield,
   Crown,
   BedDouble,
   ChevronDown,
   ChevronRight,
   Building2,
+  ChefHat,
 } from "lucide-react";
 
 // ─── Types ───
@@ -53,7 +52,12 @@ const CATEGORY_CONFIG: Record<
     bg: "#FEF3C7",
     icon: Crown,
   },
-  kitchen: { label: "Mutfak", color: "#0F4C75", bg: "#DBEAFE", icon: ChefHat },
+  kitchen: {
+    label: "Mutfak",
+    color: "#DC2626",
+    bg: "#FEE2E2",
+    icon: ChefHat,
+  },
   service: {
     label: "Servis",
     color: "#059669",
@@ -73,7 +77,6 @@ const CATEGORY_CONFIG: Record<
     bg: "#EDE9FE",
     icon: BedDouble,
   },
-  hygiene: { label: "Hijyen", color: "#475569", bg: "#F1F5F9", icon: Shield },
 };
 
 const LEVEL_CONFIG: Record<number, { label: string; color: string }> = {
@@ -84,7 +87,7 @@ const LEVEL_CONFIG: Record<number, { label: string; color: string }> = {
 
 // ─── Tree Node Component ───
 
-function TreeNode({
+const TreeNode = memo(function TreeNode({
   node,
   depth = 0,
   defaultOpen = true,
@@ -95,7 +98,7 @@ function TreeNode({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [hovered, setHovered] = useState(false);
-  const cat = CATEGORY_CONFIG[node.category] || CATEGORY_CONFIG.kitchen;
+  const cat = CATEGORY_CONFIG[node.category] || CATEGORY_CONFIG.service;
   const lvl = LEVEL_CONFIG[node.level] || LEVEL_CONFIG[3];
   const Icon = cat.icon;
   const hasChildren = node.children && node.children.length > 0;
@@ -204,7 +207,7 @@ function TreeNode({
       )}
     </div>
   );
-}
+});
 
 function countDescendants(node: OrgPosition): number {
   if (!node.children || node.children.length === 0) return 0;

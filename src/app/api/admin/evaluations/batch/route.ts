@@ -5,10 +5,14 @@ import {
   triggerEvaluation,
   type EvalCriteria,
 } from "@/services/evaluation.service";
+import { auth } from "@/lib/auth";
 
 // POST /api/admin/evaluations/batch — Toplu AI değerlendirme başlat
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth();
+    const createdById = session?.user?.id ? BigInt(session.user.id) : undefined;
+
     const { applicationIds, departmentId, onlyNew, customCriteria, sessionId } =
       await req.json();
 
@@ -66,7 +70,7 @@ export async function POST(req: NextRequest) {
     const parsedSessionId = sessionId ? BigInt(sessionId) : undefined;
     let queued = 0;
     for (const appId of ids) {
-      triggerEvaluation(appId, criteria, parsedSessionId);
+      triggerEvaluation(appId, criteria, parsedSessionId, createdById);
       queued++;
     }
 

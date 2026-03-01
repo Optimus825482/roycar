@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { apiError } from "@/lib/utils";
+import { apiError, safeBigInt } from "@/lib/utils";
 
 // GET /api/admin/applications/:id — Başvuru detayı
 export async function GET(
@@ -8,8 +8,11 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const appId = safeBigInt(id);
+    if (!appId) return apiError("Geçersiz başvuru ID", 400);
+
     const application = await prisma.application.findUnique({
-      where: { id: BigInt(id) },
+      where: { id: appId },
       include: {
         department: true,
         formConfig: { select: { id: true, title: true, mode: true } },
@@ -23,6 +26,20 @@ export async function GET(
         },
         evaluations: {
           orderBy: { createdAt: "desc" as const },
+          include: {
+            session: {
+              select: {
+                id: true,
+                label: true,
+                description: true,
+                status: true,
+                createdAt: true,
+              },
+            },
+            createdBy: {
+              select: { id: true, fullName: true, username: true },
+            },
+          },
         },
         fieldValues: {
           include: {
@@ -63,6 +80,7 @@ export async function GET(
             status: true,
             evaluatedAt: true,
             report: true,
+            finalDecision: true,
           },
           orderBy: { createdAt: "desc" },
           take: 1,
@@ -78,8 +96,13 @@ export async function GET(
     );
 
     // Backward compat: add `evaluation` (latest) from `evaluations` array
+    // Override status to "hired" if any evaluation has finalDecision = "hired"
+    const hasHiredDecision = raw.evaluations?.some(
+      (e: Record<string, unknown>) => e.finalDecision === "hired",
+    );
     const serialized = {
       ...raw,
+      status: hasHiredDecision ? "hired" : raw.status,
       evaluation: raw.evaluations?.[0] || null,
       evaluationHistory: raw.evaluations || [],
       otherApplications: raw.otherApplications?.map(

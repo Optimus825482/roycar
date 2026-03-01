@@ -33,8 +33,9 @@ export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
 
 export function generateApplicationNo(): string {
   const year = new Date().getFullYear();
+  const ts = Date.now().toString(36).slice(-4);
   const random = Math.floor(10000 + Math.random() * 90000);
-  return `MR-${year}-${random}`;
+  return `MR-${year}-${ts}${random}`;
 }
 
 export type ApiResponse<T = unknown> = {
@@ -56,4 +57,11 @@ export function apiSuccess<T>(data: T, message?: string): ApiResponse<T> {
 
 export function apiError(error: string, status = 400): Response {
   return Response.json({ success: false, error }, { status });
+}
+
+// ─── Safe BigInt Conversion ───
+
+export function safeBigInt(value: string): bigint | null {
+  if (!/^\d+$/.test(value)) return null;
+  return BigInt(value);
 }

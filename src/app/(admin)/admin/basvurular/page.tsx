@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ApplicationDetailModal } from "@/components/admin/ApplicationDetailModal";
 import { AppTableSkeleton } from "@/components/shared/AppLoader";
 import {
@@ -152,9 +153,23 @@ export default function BasvurularPage() {
 
   // Filters & sorting
   const [departmentFilter, setDepartmentFilter] = useState("");
+  const [nameFilter, setNameFilter] = useState("");
   const [sortBy, setSortBy] = useState("submittedAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
+
+  // Debounced name search
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [nameInput, setNameInput] = useState("");
+
+  const handleNameSearch = useCallback((value: string) => {
+    setNameInput(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setNameFilter(value);
+      setPage(1);
+    }, 400);
+  }, []);
 
   // Modal state
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
@@ -198,6 +213,7 @@ export default function BasvurularPage() {
         sortOrder,
       });
       if (departmentFilter) params.set("departmentId", departmentFilter);
+      if (nameFilter.trim()) params.set("search", nameFilter.trim());
 
       const res = await fetch(`/api/admin/applications?${params}`);
       const json = await res.json();
@@ -209,10 +225,10 @@ export default function BasvurularPage() {
       console.error("Applications fetch error:", err);
     }
     setLoading(false);
-  }, [page, departmentFilter, sortBy, sortOrder]);
+  }, [page, departmentFilter, nameFilter, sortBy, sortOrder]);
 
   useEffect(() => {
-    queueMicrotask(() => fetchApplications());
+    fetchApplications();
   }, [fetchApplications]);
 
   // Sort toggle handler
@@ -264,6 +280,21 @@ export default function BasvurularPage() {
       <Card className="border-mr-gold/20">
         <CardContent className="pt-4 pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            {/* Name Search */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-mr-text-secondary whitespace-nowrap">
+                Ara:
+              </span>
+              <Input
+                type="text"
+                placeholder="Ad Soyad ara..."
+                value={nameInput}
+                onChange={(e) => handleNameSearch(e.target.value)}
+                className="w-48 h-8 text-sm"
+                aria-label="Ad soyad filtresi"
+              />
+            </div>
+
             {/* Department Filter */}
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-mr-text-secondary whitespace-nowrap">

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiSuccess, apiError } from "@/lib/utils";
+import { apiSuccess, apiError, safeBigInt } from "@/lib/utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -8,8 +8,11 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
+    const cid = safeBigInt(id);
+    if (!cid) return apiError("Geçersiz kriter ID", 400);
+
     const criteria = await prisma.screeningCriteria.findUnique({
-      where: { id: BigInt(id) },
+      where: { id: cid },
       include: {
         department: { select: { name: true } },
         formConfig: { select: { title: true } },
@@ -47,8 +50,11 @@ export async function PUT(req: NextRequest, { params }: Params) {
       isActive,
     } = body;
 
+    const uid = safeBigInt(id);
+    if (!uid) return apiError("Geçersiz kriter ID", 400);
+
     const criteria = await prisma.screeningCriteria.update({
-      where: { id: BigInt(id) },
+      where: { id: uid },
       data: {
         ...(name !== undefined && { name: name.trim() }),
         ...(description !== undefined && {
@@ -80,7 +86,10 @@ export async function PUT(req: NextRequest, { params }: Params) {
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
-    await prisma.screeningCriteria.delete({ where: { id: BigInt(id) } });
+    const did = safeBigInt(id);
+    if (!did) return apiError("Geçersiz kriter ID", 400);
+
+    await prisma.screeningCriteria.delete({ where: { id: did } });
     return Response.json(apiSuccess({ deleted: true }));
   } catch (err) {
     console.error("Screening criteria delete error:", err);
