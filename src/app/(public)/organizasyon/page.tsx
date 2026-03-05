@@ -16,6 +16,8 @@ import {
   ListTree,
   Layers,
   GitBranch,
+  Plus,
+  Minus,
 } from "lucide-react";
 
 // ─── Types ───
@@ -394,10 +396,36 @@ function buildMermaidFlowchart(tree: OrgPosition[]): string {
 const MERMAID_CDN =
   "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js";
 
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 2.5;
+const ZOOM_STEP = 0.25;
+
 function MermaidDiagramView({ code }: { code: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
+
+  const zoomIn = useCallback(() => {
+    setZoom((z) => Math.min(ZOOM_MAX, z + ZOOM_STEP));
+  }, []);
+  const zoomOut = useCallback(() => {
+    setZoom((z) => Math.max(ZOOM_MIN, z - ZOOM_STEP));
+  }, []);
+
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      if (status !== "ready") return;
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      setZoom((z) => {
+        const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+        return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z + delta));
+      });
+    },
+    [status],
+  );
 
   useEffect(() => {
     const container = containerRef.current;
@@ -468,11 +496,55 @@ function MermaidDiagramView({ code }: { code: string }) {
   }
 
   return (
-    <div className="min-w-0 overflow-x-auto w-full">
+    <div className="relative min-w-0 w-full">
+      {/* Zoom kontrolleri — sağ üst */}
+      {status === "ready" && (
+        <div
+          className="absolute top-2 right-2 z-10 flex items-center gap-0.5 rounded-lg border border-gray-200 bg-white/95 shadow-md backdrop-blur-sm"
+          aria-label="Yakınlaştır / Uzaklaştır"
+        >
+          <button
+            type="button"
+            onClick={zoomOut}
+            disabled={zoom <= ZOOM_MIN}
+            className="p-2 text-mr-navy hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed rounded-l-md transition-colors"
+            aria-label="Uzaklaştır"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+          <span className="min-w-[2.5rem] text-center text-xs font-medium text-mr-text-secondary tabular-nums px-1">
+            {Math.round(zoom * 100)}%
+          </span>
+          <button
+            type="button"
+            onClick={zoomIn}
+            disabled={zoom >= ZOOM_MAX}
+            className="p-2 text-mr-navy hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed rounded-r-md transition-colors"
+            aria-label="Yakınlaştır"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Diyagram alanı: tekerlek ile zoom, taşma kaydırmalı */}
       <div
-        ref={containerRef}
-        className="mermaid-diagram-wrap flex justify-center py-4 min-h-[320px]"
-      />
+        className="min-w-0 overflow-auto w-full min-h-[320px] py-4"
+        onWheel={handleWheel}
+        title={status === "ready" ? "Ctrl + tekerlek ile yakınlaştır/uzaklaştır" : undefined}
+      >
+        <div
+          ref={wrapRef}
+          className="mermaid-diagram-wrap flex justify-center origin-center transition-transform duration-150"
+          style={{ transform: `scale(${zoom})`, transformOrigin: "center top" }}
+        >
+          <div
+            ref={containerRef}
+            className="flex justify-center min-h-[280px]"
+          />
+        </div>
+      </div>
+
       {status === "loading" && (
         <div className="flex items-center justify-center gap-2 py-8 text-mr-text-muted text-sm">
           <div className="w-5 h-5 border-2 border-mr-gold/30 border-t-mr-gold rounded-full animate-spin" />
