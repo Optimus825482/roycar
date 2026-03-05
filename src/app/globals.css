@@ -154,12 +154,17 @@ h6 {
   body {
     @apply bg-background text-foreground;
   }
-  /* Autofill: yazı rengi kalıtımlı kalsın (kontrast kaybolmasın) */
+  /* Tüm input/textarea: yazı rengi siyah (tüm uygulama) */
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea {
+    color: #000;
+  }
+  /* Autofill: yazı siyah kalsın */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus,
   input:-webkit-autofill:active {
-    -webkit-text-fill-color: currentColor;
+    -webkit-text-fill-color: #000;
   }
 }
 

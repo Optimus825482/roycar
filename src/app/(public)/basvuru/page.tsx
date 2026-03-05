@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { WizardContainer } from "@/components/application-form/WizardContainer";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 export default function ApplicationPage() {
@@ -15,9 +15,15 @@ export default function ApplicationPage() {
         <DialogContent
           showCloseButton={false}
           className="sm:max-w-md border-mr-gold/30 bg-linear-to-b from-[#1a1a2e] to-[#16213e] shadow-2xl"
+          aria-describedby="welcome-dialog-desc"
         >
           <VisuallyHidden>
             <DialogTitle>Hoşgeldiniz</DialogTitle>
+          </VisuallyHidden>
+          <VisuallyHidden>
+            <DialogDescription id="welcome-dialog-desc">
+              Başvuru sürecine hoş geldiniz. Devam etmek için Başvuruya Başla butonuna tıklayın.
+            </DialogDescription>
           </VisuallyHidden>
           <div className="my-2">
             <div className="w-12 h-px bg-mr-gold/50 mx-auto" />
