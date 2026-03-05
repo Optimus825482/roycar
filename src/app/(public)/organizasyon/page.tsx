@@ -373,7 +373,7 @@ function buildMermaidFlowchart(tree: OrgPosition[]): string {
       id = `N${nodeIndex++}`;
       idMap.set(node.id, id);
       const label = node.incumbentName
-        ? `${node.title} · ${node.incumbentName}`
+        ? `${node.title}<br/>${node.incumbentName}`
         : node.title;
       const safe = escapeMermaidLabel(label);
       lines.push(`  ${id}["${safe}"]`);
