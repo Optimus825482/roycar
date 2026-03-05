@@ -328,8 +328,8 @@ export default function DataImportPage() {
     Object.values(columnMapping).includes("email");
 
   return (
-    <div className="space-y-6" role="main" aria-label="Veri aktarımı sayfası">
-      <h1 className="text-2xl font-heading text-mr-navy">Veri Aktarımı</h1>
+    <div className="space-y-6 w-full min-w-0 overflow-x-hidden" role="main" aria-label="Veri aktarımı sayfası">
+      <h1 className="text-xl sm:text-2xl font-heading text-mr-navy">Veri Aktarımı</h1>
 
       {/* Step: Upload */}
       {step === "upload" && (
@@ -848,7 +848,7 @@ export default function DataImportPage() {
               Henüz aktarım yapılmamış.
             </p>
           ) : (
-            <div className="space-y-0">
+            <div className="overflow-x-auto min-w-0 -mx-1">
               <Table>
                 <TableHeader>
                   <TableRow>

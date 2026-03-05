@@ -743,7 +743,7 @@ export default function ChatPage() {
 
   return (
     <div
-      className="flex h-[calc(100vh-7rem)] gap-4"
+      className="flex flex-col lg:flex-row h-[calc(100vh-7rem)] min-h-0 gap-4 w-full min-w-0 overflow-x-hidden"
       role="main"
       aria-label="AI Sohbet"
     >

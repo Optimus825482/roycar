@@ -1,10 +1,14 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiSuccess, apiError } from "@/lib/utils";
+import { requireAuth, requirePermission } from "@/lib/auth-helpers";
 
 // GET /api/admin/screening — Kriter listesi
 export async function GET() {
   try {
+    const authResult = await requireAuth();
+    if (!authResult.ok) return authResult.response;
+
     const criteria = await prisma.screeningCriteria.findMany({
       orderBy: { createdAt: "desc" },
       include: {
@@ -23,6 +27,9 @@ export async function GET() {
 // POST /api/admin/screening — Yeni kriter oluştur
 export async function POST(req: NextRequest) {
   try {
+    const authResult = await requirePermission("screening");
+    if (!authResult.ok) return authResult.response;
+
     const body = await req.json();
     const {
       name,

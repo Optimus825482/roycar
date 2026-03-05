@@ -153,11 +153,11 @@ export default function EvaluationSessionsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full min-w-0 overflow-x-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-mr-navy">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-semibold text-mr-navy">
             Başvuru Değerlendirme
           </h1>
           <p className="text-sm text-mr-text-secondary mt-1">

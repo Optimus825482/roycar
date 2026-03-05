@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Inter, Dancing_Script } from "next/font/google";
+import { Providers } from "@/components/providers";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -47,11 +48,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr">
+    <html lang="tr" suppressHydrationWarning>
       <body
         className={`${playfair.variable} ${inter.variable} ${dancingScript.variable} antialiased`}
       >
-        {children}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-mr-navy focus:text-white focus:rounded-lg focus:outline-none focus:ring-2 focus:ring-mr-gold"
+        >
+          İçeriğe atla
+        </a>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

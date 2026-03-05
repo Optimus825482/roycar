@@ -2,7 +2,6 @@
 
 import { prisma } from "@/lib/prisma";
 import Papa from "papaparse";
-import * as XLSX from "xlsx";
 
 // Sütun eşleştirme haritası (CSV/XLSX sütun adları → sistem alanları)
 // Tüm key'ler ASCII-normalized (Türkçe karakterler dönüştürülmüş)
@@ -253,7 +252,8 @@ export function parseCSVRaw(content: string): string[][] {
   return result.data;
 }
 
-export function parseXLSXRaw(buffer: ArrayBuffer): string[][] {
+export async function parseXLSXRaw(buffer: ArrayBuffer): Promise<string[][]> {
+  const XLSX = await import("xlsx");
   const workbook = XLSX.read(buffer, { type: "array" });
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
@@ -288,12 +288,12 @@ export function parseCSV(content: string): {
   return { headers, rows, headerRowIndex };
 }
 
-export function parseXLSX(buffer: ArrayBuffer): {
+export async function parseXLSX(buffer: ArrayBuffer): Promise<{
   headers: string[];
   rows: Record<string, string>[];
   headerRowIndex: number;
-} {
-  const rawRows = parseXLSXRaw(buffer);
+}> {
+  const rawRows = await parseXLSXRaw(buffer);
   if (rawRows.length === 0) return { headers: [], rows: [], headerRowIndex: 0 };
 
   const { headerRowIndex, headers, dataRows } = detectHeaderRow(rawRows);

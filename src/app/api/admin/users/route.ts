@@ -2,10 +2,15 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiError } from "@/lib/utils";
 import { hash } from "bcryptjs";
+import { requireAuth, requirePermission } from "@/lib/auth-helpers";
+import { adminUserCreateSchema } from "@/lib/api-schemas";
 
 // GET /api/admin/users — Kullanıcı listesi
 export async function GET() {
   try {
+    const authResult = await requireAuth();
+    if (!authResult.ok) return authResult.response;
+
     const users = await prisma.adminUser.findMany({
       orderBy: { createdAt: "desc" },
       select: {
@@ -36,20 +41,23 @@ export async function GET() {
 // POST /api/admin/users — Yeni kullanıcı oluştur
 export async function POST(req: NextRequest) {
   try {
+    const authResult = await requirePermission("user_management");
+    if (!authResult.ok) return authResult.response;
+
     const body = await req.json();
-    const { username, email, fullName, password, role, permissions } = body;
-
-    if (!username?.trim() || !fullName?.trim() || !password?.trim()) {
-      return apiError("Kullanıcı adı, ad soyad ve parola zorunludur.");
+    const parsed = adminUserCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      const firstMessage = parsed.error.issues[0]?.message;
+      const message =
+        typeof firstMessage === "string" ? firstMessage : "Geçersiz istek.";
+      return apiError(message, 400);
     }
-
-    if (password.length < 6) {
-      return apiError("Parola en az 6 karakter olmalıdır.");
-    }
+    const { username, fullName, password, email, role, permissions } =
+      parsed.data;
 
     // Check duplicate username
     const existing = await prisma.adminUser.findUnique({
-      where: { username: username.trim().toLowerCase() },
+      where: { username },
     });
     if (existing) {
       return apiError("Bu kullanıcı adı zaten kayıtlı.");
@@ -59,12 +67,12 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.adminUser.create({
       data: {
-        username: username.trim().toLowerCase(),
-        email: email?.trim() || null,
-        fullName: fullName.trim(),
+        username,
+        email: email ?? null,
+        fullName,
         passwordHash,
         role: role || "hr_manager",
-        permissions: permissions || {
+        permissions: permissions ?? {
           form_builder: true,
           ai_chat: true,
           evaluations: true,

@@ -504,6 +504,8 @@ export function CameraPhotoCapture({
             <img
               src={imageSrc}
               alt="Çekilen fotoğraf"
+              width={160}
+              height={208}
               className="w-full h-full object-cover"
             />
           </div>

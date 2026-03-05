@@ -1,10 +1,14 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiError } from "@/lib/utils";
+import { requireAuth } from "@/lib/auth-helpers";
 
 // GET /api/admin/applications — Başvuru listesi (filtre + sıralama + sayfalama)
 export async function GET(req: NextRequest) {
   try {
+    const authResult = await requireAuth();
+    if (!authResult.ok) return authResult.response;
+
     const url = new URL(req.url);
     const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
     const pageSize = Math.min(
@@ -23,6 +27,8 @@ export async function GET(req: NextRequest) {
     const maxScore = url.searchParams.get("maxScore");
     const dateFrom = url.searchParams.get("dateFrom");
     const dateTo = url.searchParams.get("dateTo");
+    const evaluationsLatestOnly =
+      url.searchParams.get("evaluations") === "latest";
 
     // Build where clause
     const where: Record<string, unknown> = {};
@@ -32,6 +38,7 @@ export async function GET(req: NextRequest) {
         { fullName: { contains: search, mode: "insensitive" } },
         { email: { contains: search, mode: "insensitive" } },
         { applicationNo: { contains: search, mode: "insensitive" } },
+        { phone: { contains: search, mode: "insensitive" } },
       ];
     }
     if (status) where.status = status;
@@ -71,6 +78,7 @@ export async function GET(req: NextRequest) {
               finalDecision: true,
             },
             orderBy: { createdAt: "desc" },
+            ...(evaluationsLatestOnly ? { take: 1 } : {}),
           },
         },
         orderBy:

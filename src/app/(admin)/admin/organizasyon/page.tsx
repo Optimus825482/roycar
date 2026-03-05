@@ -607,12 +607,12 @@ export default function AdminOrgChartPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white shrink-0">
-        <div className="flex items-center gap-3">
-          <Building2 className="w-5 h-5 text-[#0F4C75]" />
-          <h1 className="text-sm font-bold text-gray-800">
+    <div className="h-[calc(100vh-8rem)] flex flex-col w-full min-w-0 overflow-x-hidden">
+      {/* Toolbar — mobile: wrap */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-3 border-b border-gray-200 bg-white shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Building2 className="w-5 h-5 text-[#0F4C75] shrink-0" />
+          <h1 className="text-sm font-bold text-gray-800 truncate">
             F&B Organizasyon Şeması
           </h1>
           <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
@@ -676,9 +676,9 @@ export default function AdminOrgChartPage() {
           )}
         </div>
 
-        {/* Detail panel (right side) */}
+        {/* Detail panel (right side) — mobile: full width */}
         {selectedPosition && (
-          <div className="w-80 border-l border-gray-200 bg-gray-50 overflow-y-auto p-4 shrink-0">
+          <div className="w-full lg:w-80 min-w-0 border-t lg:border-t-0 lg:border-l border-gray-200 bg-gray-50 overflow-y-auto p-4 shrink-0">
             <DetailPanel
               position={selectedPosition}
               onClose={() => setSelectedPosition(null)}

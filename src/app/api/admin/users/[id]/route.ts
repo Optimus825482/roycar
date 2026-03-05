@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiError, safeBigInt } from "@/lib/utils";
 import { hash } from "bcryptjs";
+import { requirePermission } from "@/lib/auth-helpers";
 
 // PUT /api/admin/users/:id — Kullanıcı güncelle
 export async function PUT(
@@ -9,6 +10,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const authResult = await requirePermission("user_management");
+    if (!authResult.ok) return authResult.response;
+
     const { id } = await params;
     const body = await req.json();
     const { fullName, email, username, role, permissions, isActive, password } =
@@ -80,6 +84,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const authResult = await requirePermission("user_management");
+    if (!authResult.ok) return authResult.response;
+
     const { id } = await params;
     const userId = safeBigInt(id);
     if (!userId) return apiError("Geçersiz kullanıcı ID", 400);

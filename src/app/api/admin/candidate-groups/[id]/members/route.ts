@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { safeBigInt } from "@/lib/utils";
+import { requirePermission } from "@/lib/auth-helpers";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 // POST — Gruba üye ekle (tek veya toplu)
 export async function POST(req: NextRequest, ctx: Ctx) {
   try {
+    const authResult = await requirePermission("evaluations");
+    if (!authResult.ok) return authResult.response;
+
     const { id } = await ctx.params;
     const groupId = safeBigInt(id);
     if (!groupId) {
@@ -109,6 +113,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 // DELETE — Gruptan üye çıkar
 export async function DELETE(req: NextRequest, ctx: Ctx) {
   try {
+    const authResult = await requirePermission("evaluations");
+    if (!authResult.ok) return authResult.response;
+
     const { id } = await ctx.params;
     const groupId = safeBigInt(id);
     if (!groupId) {

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess, safeBigInt } from "@/lib/utils";
+import { requireAuth, requirePermission } from "@/lib/auth-helpers";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -8,6 +9,9 @@ type Ctx = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, ctx: Ctx) {
   try {
+    const authResult = await requireAuth();
+    if (!authResult.ok) return authResult.response;
+
     const { id } = await ctx.params;
     const sessionId = safeBigInt(id);
     if (!sessionId) return apiError("Geçersiz oturum ID", 400);
@@ -127,6 +131,9 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 
 export async function PUT(req: NextRequest, ctx: Ctx) {
   try {
+    const authResult = await requirePermission("evaluations");
+    if (!authResult.ok) return authResult.response;
+
     const { id } = await ctx.params;
     const body = await req.json();
     const { label, description, criteria, status } = body;
@@ -165,6 +172,9 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
 
 export async function DELETE(_req: NextRequest, ctx: Ctx) {
   try {
+    const authResult = await requirePermission("evaluations");
+    if (!authResult.ok) return authResult.response;
+
     const { id } = await ctx.params;
     const sessionId = safeBigInt(id);
     if (!sessionId) return apiError("Geçersiz oturum ID", 400);

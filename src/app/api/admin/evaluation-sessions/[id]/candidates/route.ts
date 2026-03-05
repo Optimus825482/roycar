@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess, safeBigInt } from "@/lib/utils";
-import { auth } from "@/lib/auth";
+import { requireAuth, requirePermission } from "@/lib/auth-helpers";
 import {
   triggerEvaluation,
   type EvalCriteria,
@@ -13,6 +13,9 @@ type Ctx = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, ctx: Ctx) {
   try {
+    const authResult = await requireAuth();
+    if (!authResult.ok) return authResult.response;
+
     const { id } = await ctx.params;
     const sessionId = safeBigInt(id);
     if (!sessionId) return apiError("Geçersiz oturum ID", 400);
@@ -83,12 +86,13 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 
 export async function POST(req: NextRequest, ctx: Ctx) {
   try {
+    const authResult = await requirePermission("evaluations");
+    if (!authResult.ok) return authResult.response;
+    const createdById = authResult.session.user?.id ? BigInt(authResult.session.user.id) : undefined;
+
     const { id } = await ctx.params;
     const sessionId = safeBigInt(id);
     if (!sessionId) return apiError("Geçersiz oturum ID", 400);
-
-    const session = await auth();
-    const createdById = session?.user?.id ? BigInt(session.user.id) : undefined;
 
     const { applicationIds, customCriteria, skipEvaluation } = await req.json();
 

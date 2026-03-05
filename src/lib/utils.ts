@@ -55,8 +55,30 @@ export function apiSuccess<T>(data: T, message?: string): ApiResponse<T> {
   return serialized;
 }
 
-export function apiError(error: string, status = 400): Response {
-  return Response.json({ success: false, error }, { status });
+export function apiError(
+  error: string,
+  status = 400,
+  code?: string
+): Response {
+  const body: { success: false; error: string; code?: string } = {
+    success: false,
+    error,
+  };
+  if (code !== undefined) body.code = code;
+  return Response.json(body, { status });
+}
+
+/**
+ * Centralized route error handler: logs and returns a standard API error response.
+ * Use in catch blocks for consistent error reporting.
+ */
+export function handleRouteError(
+  err: unknown,
+  message: string,
+  status = 500
+): Response {
+  console.error(message, err);
+  return apiError(message, status);
 }
 
 // ─── Safe BigInt Conversion ───

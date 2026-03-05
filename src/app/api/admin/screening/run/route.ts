@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/utils";
+import { requirePermission } from "@/lib/auth-helpers";
 import {
   evaluateScreening,
   runAutoScreening,
@@ -8,6 +9,9 @@ import {
 // POST /api/admin/screening/run — Ön eleme çalıştır
 export async function POST(req: NextRequest) {
   try {
+    const authResult = await requirePermission("screening");
+    if (!authResult.ok) return authResult.response;
+
     const { applicationId, criteriaId } = await req.json();
 
     if (!applicationId) return apiError("applicationId zorunludur.");

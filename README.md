@@ -37,6 +37,10 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
+## Build (Windows)
+
+Windows’ta `npm run build` sırasında standalone çıktıda copyfile hatası alırsanız: `SKIP_STANDALONE=1 npm run build` kullanın. Production’da Linux kullanılıyorsa bu gerekmez.
+
 ## Docker Deployment (App + DB Ayrı Container)
 
 Bu proje artık uygulama ve veritabanını ayrı servis olarak çalıştırır:

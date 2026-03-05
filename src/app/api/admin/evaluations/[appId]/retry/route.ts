@@ -2,16 +2,17 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess } from "@/lib/utils";
 import { triggerEvaluation } from "@/services/evaluation.service";
-import { auth } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth-helpers";
 
 type Params = { params: Promise<{ appId: string }> };
 
 // POST /api/admin/evaluations/:appId/retry — Yeni değerlendirme başlat
 export async function POST(req: NextRequest, { params }: Params) {
   try {
-    const authSession = await auth();
-    const createdById = authSession?.user?.id
-      ? BigInt(authSession.user.id)
+    const authResult = await requirePermission("evaluations");
+    if (!authResult.ok) return authResult.response;
+    const createdById = authResult.session.user?.id
+      ? BigInt(authResult.session.user.id)
       : undefined;
 
     const { appId } = await params;

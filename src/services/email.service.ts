@@ -1,6 +1,20 @@
 // ─── E-posta Bildirimi Servisi ───
 
 import nodemailer from "nodemailer";
+import { prisma } from "@/lib/prisma";
+
+const EMAIL_KEYS_PREFIX = "email_";
+
+export async function getEmailTemplates(): Promise<Record<string, string>> {
+  const rows = await prisma.systemSetting.findMany({
+    where: { key: { startsWith: EMAIL_KEYS_PREFIX } },
+  });
+  const map: Record<string, string> = {};
+  for (const r of rows) {
+    map[r.key] = r.value;
+  }
+  return map;
+}
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.gmail.com",
@@ -78,17 +92,20 @@ export async function sendApplicationConfirmation(data: {
   applicationNo: string;
   departmentName: string;
 }): Promise<void> {
-  // Skip if SMTP not configured
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.log("SMTP yapılandırılmamış, e-posta gönderilmedi:", data.email);
     return;
   }
 
+  const t = await getEmailTemplates();
+  const subjectTemplate = t.email_application_subject ?? "Başvurunuz Alındı — {{applicationNo}}";
+  const subject = subjectTemplate.replace(/\{\{applicationNo\}\}/g, data.applicationNo);
+
   try {
     await transporter.sendMail({
       from: `"F&B Career System" <${process.env.SMTP_USER}>`,
       to: data.email,
-      subject: `Başvurunuz Alındı — ${data.applicationNo}`,
+      subject,
       html: applicationConfirmationHTML({
         fullName: data.fullName,
         applicationNo: data.applicationNo,
@@ -146,8 +163,10 @@ function statusNotificationHTML(data: {
   applicationNo: string;
   departmentName: string;
   status: NotifiableStatus;
+  messageOverride?: string;
 }): string {
   const cfg = STATUS_NOTIFICATION_CONFIG[data.status];
+  const message = data.messageOverride ?? cfg.message;
   return `
 <!DOCTYPE html>
 <html>
@@ -166,7 +185,7 @@ function statusNotificationHTML(data: {
         Sayın <strong>${data.fullName}</strong>,
       </p>
       <p style="color:#5a6b8a;line-height:1.7;margin:0 0 24px;">
-        ${cfg.message}
+        ${message}
       </p>
       <div style="background:#f5f3ef;border-radius:8px;padding:16px;margin:0 0 24px;">
         <table style="width:100%;border-collapse:collapse;">
@@ -210,17 +229,24 @@ export async function sendStatusChangeEmail(data: {
     return;
   }
 
+  const t = await getEmailTemplates();
+  const subjectKey = `email_status_${data.status}_subject`;
+  const messageKey = `email_status_${data.status}_message`;
   const cfg = STATUS_NOTIFICATION_CONFIG[data.status];
+  const subject = t[subjectKey] ?? cfg.subject;
+  const messageOverride = t[messageKey];
+
   try {
     await transporter.sendMail({
       from: `"F&B Career System" <${process.env.SMTP_USER}>`,
       to: data.email,
-      subject: cfg.subject,
+      subject,
       html: statusNotificationHTML({
         fullName: data.fullName,
         applicationNo: data.applicationNo,
         departmentName: data.departmentName,
         status: data.status,
+        messageOverride,
       }),
     });
     console.log(`Durum bildirimi [${data.status}] gönderildi:`, data.email);

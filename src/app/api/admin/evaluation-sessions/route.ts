@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { requireAuth, requirePermission } from "@/lib/auth-helpers";
 
 // GET — Tüm oturumları listele
 export async function GET() {
   try {
+    const authResult = await requireAuth();
+    if (!authResult.ok) return authResult.response;
+
     const sessions = await prisma.evaluationSession.findMany({
       orderBy: { createdAt: "desc" },
       include: {
@@ -44,8 +47,9 @@ export async function GET() {
 // POST — Yeni oturum oluştur
 export async function POST(req: NextRequest) {
   try {
-    const authSession = await auth();
-    const userId = authSession?.user?.id ? BigInt(authSession.user.id) : null;
+    const authResult = await requirePermission("evaluations");
+    if (!authResult.ok) return authResult.response;
+    const userId = authResult.session.user?.id ? BigInt(authResult.session.user.id) : null;
 
     const body = await req.json();
     const { label, description, criteria } = body;

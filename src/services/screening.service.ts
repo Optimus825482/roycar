@@ -43,7 +43,7 @@ interface ScreeningOutput {
 
 // ─── Evaluate a single rule against answer ───
 
-function evaluateRule(
+export function evaluateRule(
   rule: ScreeningRule,
   answer: unknown,
 ): { passed: boolean; reason: string } {
@@ -215,7 +215,7 @@ async function runAiScreening(
 
 // ─── Format candidate for AI ───
 
-function formatCandidateForScreening(
+export function formatCandidateForScreening(
   application: {
     fullName: string;
     email: string;

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { apiError, safeBigInt } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth-helpers";
 import { stripThinkingTags } from "@/lib/ai-client";
 import {
   getChatMessages,
@@ -59,6 +60,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const authResult = await requirePermission("ai_chat");
+    if (!authResult.ok) return authResult.response;
+
     const { id } = await params;
     const chatId = safeBigInt(id);
     if (!chatId) return apiError("Geçersiz sohbet ID", 400);
@@ -82,6 +86,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const authResult = await requirePermission("ai_chat");
+    if (!authResult.ok) return authResult.response;
+
     const { id } = await params;
     const { message, stream: useStream } = await req.json();
     if (!message?.trim()) return apiError("Mesaj boş olamaz.");

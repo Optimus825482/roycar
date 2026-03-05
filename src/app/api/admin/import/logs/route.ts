@@ -1,9 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { apiError } from "@/lib/utils";
+import { requirePermission } from "@/lib/auth-helpers";
 
 // GET /api/admin/import/logs — Aktarım geçmişi
 export async function GET() {
   try {
+    const authResult = await requirePermission("data_import");
+    if (!authResult.ok) return authResult.response;
+
     const logs = await prisma.importLog.findMany({
       orderBy: { createdAt: "desc" },
       take: 20,

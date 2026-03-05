@@ -19,7 +19,7 @@ function delay(ms: number): Promise<void> {
 
 // ─── Format candidate data for evaluation ───
 
-function formatCandidateData(
+export function formatCandidateData(
   application: {
     fullName: string;
     email: string;
@@ -58,7 +58,7 @@ function formatCandidateData(
 
 // ─── Build custom criteria prompt injection ───
 
-function buildCriteriaPrompt(customCriteria?: EvalCriteria): string {
+export function buildCriteriaPrompt(customCriteria?: EvalCriteria): string {
   if (!customCriteria || customCriteria.length === 0) return "";
 
   const lines = [

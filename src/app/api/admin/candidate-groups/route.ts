@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth, requirePermission } from "@/lib/auth-helpers";
 
 // GET — Tüm grupları listele
 export async function GET() {
   try {
+    const authResult = await requireAuth();
+    if (!authResult.ok) return authResult.response;
+
     const groups = await prisma.candidateGroup.findMany({
       orderBy: { createdAt: "desc" },
       include: {
@@ -33,6 +37,9 @@ export async function GET() {
 // POST — Yeni grup oluştur
 export async function POST(req: NextRequest) {
   try {
+    const authResult = await requirePermission("evaluations");
+    if (!authResult.ok) return authResult.response;
+
     const body = await req.json();
     const { name, description } = body;
 

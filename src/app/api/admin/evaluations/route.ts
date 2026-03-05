@@ -1,10 +1,14 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess } from "@/lib/utils";
+import { requireAuth } from "@/lib/auth-helpers";
 
 // GET /api/admin/evaluations — Başvuruları değerlendirme durumuyla listele
 export async function GET(req: NextRequest) {
   try {
+    const authResult = await requireAuth();
+    if (!authResult.ok) return authResult.response;
+
     const { searchParams } = new URL(req.url);
     const departmentId = searchParams.get("departmentId");
     const filter = searchParams.get("filter") || "all";

@@ -29,17 +29,24 @@ import {
   Network,
   Users,
 } from "lucide-react";
+import { AdminBreadcrumb } from "@/components/admin/AdminBreadcrumb";
 
-const NAV_ITEMS = [
+/** Menü öğesi: permission yoksa tüm giriş yapmış adminler görür. */
+const NAV_ITEMS: {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  permission?: "form_builder" | "evaluations" | "ai_chat" | "data_import" | "settings";
+}[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/basvurular", label: "Başvurular", icon: ClipboardList },
-  { href: "/admin/form-builder", label: "Form Builder", icon: PenTool },
-  { href: "/admin/on-eleme", label: "Başvuru Değerlendirme", icon: Filter },
-  { href: "/admin/aday-gruplari", label: "Aday Grupları", icon: Users },
-  { href: "/admin/chat", label: "AI Asistan", icon: Bot },
-  { href: "/admin/veri-aktarimi", label: "Veri Aktarımı", icon: FolderInput },
+  { href: "/admin/form-builder", label: "Form Builder", icon: PenTool, permission: "form_builder" },
+  { href: "/admin/on-eleme", label: "Başvuru Değerlendirme", icon: Filter, permission: "evaluations" },
+  { href: "/admin/aday-gruplari", label: "Aday Grupları", icon: Users, permission: "evaluations" },
+  { href: "/admin/chat", label: "AI Asistan", icon: Bot, permission: "ai_chat" },
+  { href: "/admin/veri-aktarimi", label: "Veri Aktarımı", icon: FolderInput, permission: "data_import" },
   { href: "/admin/organizasyon", label: "Org Şeması", icon: Network },
-  { href: "/admin/ayarlar", label: "Ayarlar", icon: Settings },
+  { href: "/admin/ayarlar", label: "Ayarlar", icon: Settings, permission: "settings" },
 ];
 
 function AdminLayoutInner({ children }: { children: React.ReactNode }) {
@@ -88,9 +95,13 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
 
-          {/* Nav */}
+          {/* Nav — yetkisi olan öğeleri göster */}
           <nav className="flex-1 p-3 space-y-1">
-            {NAV_ITEMS.map((item) => {
+            {NAV_ITEMS.filter((item) => {
+              if (!item.permission) return true;
+              const perms = (session?.user as { permissions?: Record<string, boolean> })?.permissions;
+              return perms?.[item.permission] === true;
+            }).map((item) => {
               const isActive =
                 item.href === "/admin"
                   ? pathname === "/admin"
@@ -134,7 +145,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         {/* Top bar */}
         <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-border px-4 h-14 flex items-center justify-between">
           <button
@@ -178,8 +189,11 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           </DropdownMenu>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 p-4 lg:p-6">{children}</main>
+        {/* Page content — mobile-first: no horizontal scroll */}
+        <main id="main-content" className="flex-1 p-4 lg:p-6 min-w-0 overflow-x-hidden">
+          <AdminBreadcrumb />
+          {children}
+        </main>
       </div>
     </div>
   );

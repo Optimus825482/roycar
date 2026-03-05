@@ -1,10 +1,14 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess } from "@/lib/utils";
+import { requireAuth } from "@/lib/auth-helpers";
 
 // GET /api/admin/org-chart — Tüm pozisyonlar (admin)
 export async function GET() {
   try {
+    const authResult = await requireAuth();
+    if (!authResult.ok) return authResult.response;
+
     const positions = await prisma.orgPosition.findMany({
       orderBy: { sortOrder: "asc" },
     });
@@ -18,6 +22,9 @@ export async function GET() {
 // POST /api/admin/org-chart — Yeni pozisyon
 export async function POST(req: NextRequest) {
   try {
+    const authResult = await requireAuth();
+    if (!authResult.ok) return authResult.response;
+
     const body = await req.json();
     const {
       title,

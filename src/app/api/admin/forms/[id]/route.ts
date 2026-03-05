@@ -1,12 +1,16 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess, safeBigInt } from "@/lib/utils";
+import { requireAuth, requirePermission } from "@/lib/auth-helpers";
 
 type Params = { params: Promise<{ id: string }> };
 
 // GET /api/admin/forms/:id — Form detayı (sorular + kurallar)
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
+    const authResult = await requireAuth();
+    if (!authResult.ok) return authResult.response;
+
     const { id } = await params;
     const formId = safeBigInt(id);
     if (!formId) return apiError("Geçersiz form ID", 400);
@@ -39,6 +43,9 @@ export async function GET(_req: NextRequest, { params }: Params) {
 // PUT /api/admin/forms/:id — Form güncelle
 export async function PUT(req: NextRequest, { params }: Params) {
   try {
+    const authResult = await requirePermission("form_builder");
+    if (!authResult.ok) return authResult.response;
+
     const { id } = await params;
     const body = await req.json();
     const { title, mode } = body;
@@ -64,6 +71,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
 // DELETE /api/admin/forms/:id — Form sil
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
+    const authResult = await requirePermission("form_builder");
+    if (!authResult.ok) return authResult.response;
+
     const { id } = await params;
     const did = safeBigInt(id);
     if (!did) return apiError("Geçersiz form ID", 400);

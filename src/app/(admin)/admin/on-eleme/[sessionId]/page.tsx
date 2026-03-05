@@ -26,6 +26,7 @@ import {
 } from "@/lib/export-utils";
 import type { ListExportItem } from "@/lib/export-utils";
 import { EvaluationAiAssistant } from "@/components/admin/evaluation/EvaluationAiAssistant";
+import { OnElemeStatsCards } from "@/components/admin/on-eleme/OnElemeStatsCards";
 
 // ─── Types ───
 
@@ -959,10 +960,10 @@ export default function EvaluationDetailPage() {
   // ─── RENDER ───
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full min-w-0 overflow-x-hidden">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="min-w-0">
           <button
             onClick={() => router.push("/admin/on-eleme")}
             className="text-sm text-mr-text-secondary hover:text-mr-navy mb-2 inline-flex items-center gap-1"
@@ -1022,63 +1023,10 @@ export default function EvaluationDetailPage() {
       </div>
 
       {/* İstatistik Kartları */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card>
-          <CardContent className="py-3 px-4">
-            <div className="text-2xl font-bold text-mr-navy">
-              {session.stats.total}
-            </div>
-            <div className="text-xs text-mr-text-secondary">Toplam Aday</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-3 px-4">
-            <div className="text-2xl font-bold text-emerald-600">
-              {session.stats.completed}
-            </div>
-            <div className="text-xs text-mr-text-secondary">
-              Değerlendirilmiş
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-3 px-4">
-            <div className="text-2xl font-bold text-amber-600">
-              {session.stats.pending}
-            </div>
-            <div className="text-xs text-mr-text-secondary">Bekleyen</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-3 px-4">
-            <div className="text-2xl font-bold text-blue-600">
-              {session.stats.avgScore}
-            </div>
-            <div className="text-xs text-mr-text-secondary">Ort. Puan</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-3 px-4">
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-emerald-600 font-medium">
-                {session.recommendations.shortlist} KL
-              </span>
-              <span className="text-blue-600 font-medium">
-                {session.recommendations.interview} MÜ
-              </span>
-              <span className="text-amber-600 font-medium">
-                {session.recommendations.consider} DĞ
-              </span>
-              <span className="text-red-600 font-medium">
-                {session.recommendations.reject} RD
-              </span>
-            </div>
-            <div className="text-xs text-mr-text-secondary mt-1">
-              Öneri Dağılımı
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <OnElemeStatsCards
+        stats={session.stats}
+        recommendations={session.recommendations}
+      />
 
       {/* Eylem Çubuğu + Badge Filtreler + Data Table */}
       <Card>

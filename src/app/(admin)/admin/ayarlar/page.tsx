@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { toast as toastNotify } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,11 @@ import {
   ClipboardList,
   Check,
   Volume2,
+  Mail,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface ProviderInfo {
   key: string;
@@ -82,13 +87,33 @@ const TABS = [
   { key: "ai", label: "Yapay Zeka", icon: Bot },
   { key: "voice", label: "Sesli Sohbet", icon: Mic },
   { key: "prompts", label: "Sistem Prompt'ları", icon: MessageSquare },
-  { key: "users", label: "Kullanıcı Yönetimi", icon: Users },
+  { key: "email", label: "E-posta Şablonları", icon: Mail },
+  { key: "users", label: "Kullanıcı Yönetimi", icon: Users, permission: "user_management" as const },
+] as const;
+
+const EMAIL_TEMPLATE_KEYS = [
+  { key: "email_application_subject", label: "Başvuru alındı — Konu", placeholder: "Başvurunuz Alındı — {{applicationNo}}" },
+  { key: "email_status_shortlisted_subject", label: "Ön eleme geçti — Konu" },
+  { key: "email_status_shortlisted_message", label: "Ön eleme geçti — Mesaj", textarea: true },
+  { key: "email_status_rejected_subject", label: "Red — Konu" },
+  { key: "email_status_rejected_message", label: "Red — Mesaj", textarea: true },
+  { key: "email_status_hired_subject", label: "İşe alındı — Konu" },
+  { key: "email_status_hired_message", label: "İşe alındı — Mesaj", textarea: true },
+  { key: "email_status_evaluated_subject", label: "Değerlendirildi — Konu" },
+  { key: "email_status_evaluated_message", label: "Değerlendirildi — Mesaj", textarea: true },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
 
 export default function SettingsPage() {
+  const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<TabKey>("ai");
+  const visibleTabs = TABS.filter((tab) => {
+    const withPermission = "permission" in tab && (tab as { permission?: string }).permission;
+    if (!withPermission) return true;
+    const perms = (session?.user as { permissions?: Record<string, boolean> })?.permissions;
+    return perms?.[(tab as { permission: string }).permission] === true;
+  });
   const [data, setData] = useState<SettingsData | null>(null);
   const [selectedProvider, setSelectedProvider] = useState("");
   const [chatPrompt, setChatPrompt] = useState("");
@@ -124,6 +149,9 @@ export default function SettingsPage() {
   });
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
+  const [emailTemplates, setEmailTemplates] = useState<Record<string, string>>({});
+  const [savingEmail, setSavingEmail] = useState(false);
+
   const fetchSettings = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/settings");
@@ -139,6 +167,11 @@ export default function SettingsPage() {
         setTtsSpeechRate(
           isNaN(rate) ? 1.0 : Math.max(0.5, Math.min(2.0, rate)),
         );
+        const email: Record<string, string> = {};
+        EMAIL_TEMPLATE_KEYS.forEach(({ key }) => {
+          email[key] = d.settings[key] ?? "";
+        });
+        setEmailTemplates(email);
       }
     } catch {
       toastNotify.error("Ayarlar yüklenemedi", {
@@ -203,6 +236,31 @@ export default function SettingsPage() {
       toastNotify.error("Konuşma hızı kaydedilemedi");
     }
     setSavingTts(false);
+  };
+
+  const handleSaveEmailTemplates = async () => {
+    setSavingEmail(true);
+    try {
+      const body: Record<string, string> = {};
+      EMAIL_TEMPLATE_KEYS.forEach(({ key }) => {
+        if (emailTemplates[key] !== undefined) body[key] = emailTemplates[key];
+      });
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toastNotify.success("E-posta şablonları kaydedildi");
+        fetchSettings();
+      } else {
+        toastNotify.error(json.error || "Kaydedilemedi");
+      }
+    } catch {
+      toastNotify.error("E-posta şablonları kaydedilemedi");
+    }
+    setSavingEmail(false);
   };
 
   const handleSavePrompt = async (
@@ -367,24 +425,24 @@ export default function SettingsPage() {
   const currentProvider = data.settings.ai_provider || "deepseek";
 
   return (
-    <div className="max-w-4xl" role="main" aria-label="Sistem ayarları">
-      <h1 className="text-2xl font-heading text-mr-navy mb-6">Ayarlar</h1>
+    <div className="w-full min-w-0 max-w-4xl overflow-x-hidden" role="main" aria-label="Sistem ayarları">
+      <h1 className="text-xl sm:text-2xl font-heading text-mr-navy mb-4 sm:mb-6">Ayarlar</h1>
 
-      {/* ─── Tab Navigation ─── */}
+      {/* ─── Tab Navigation — mobilde yatay kaydırma, yatay scroll yok ─── */}
       <div
-        className="border-b border-gray-200 mb-6"
+        className="border-b border-gray-200 mb-4 sm:mb-6 -mx-1 px-1"
         role="tablist"
         aria-label="Ayar kategorileri"
       >
-        <div className="flex gap-0">
-          {TABS.map((tab) => (
+        <div className="flex gap-0 overflow-x-auto overflow-y-hidden scroll-smooth scrollbar-thin min-w-0 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1">
+          {visibleTabs.map((tab) => (
             <button
               key={tab.key}
               role="tab"
               aria-selected={activeTab === tab.key}
               aria-controls={`panel-${tab.key}`}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-all cursor-pointer -mb-px ${
+              className={`flex items-center gap-2 px-3 sm:px-5 py-3 text-xs sm:text-sm font-medium border-b-2 transition-all cursor-pointer -mb-px shrink-0 whitespace-nowrap ${
                 activeTab === tab.key
                   ? "border-mr-gold text-mr-navy"
                   : "border-transparent text-mr-text-muted hover:text-mr-navy hover:border-gray-300"
@@ -733,6 +791,65 @@ export default function SettingsPage() {
                   Varsayılana Sıfırla
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ─── Tab: E-posta Şablonları ─── */}
+      {activeTab === "email" && (
+        <div id="panel-email" role="tabpanel" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base text-mr-navy flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                E-posta Şablonları
+              </CardTitle>
+              <p className="text-sm text-mr-text-secondary mt-1">
+                Başvuru onay ve durum değişikliği e-postalarında kullanılan konu ve mesaj metinleri. Konu alanında {"{{applicationNo}}"} kullanabilirsiniz.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {EMAIL_TEMPLATE_KEYS.map((item) => {
+                const { key, label } = item;
+                const placeholder = "placeholder" in item ? item.placeholder : "";
+                const textarea = "textarea" in item && item.textarea;
+                return (
+                  <div key={key} className="space-y-2">
+                    <Label htmlFor={key} className="text-sm font-medium text-mr-navy">
+                      {label}
+                    </Label>
+                    {textarea ? (
+                      <Textarea
+                        id={key}
+                        value={emailTemplates[key] ?? ""}
+                        onChange={(e) =>
+                          setEmailTemplates((prev) => ({ ...prev, [key]: e.target.value }))
+                        }
+                        className="min-h-[80px] text-sm"
+                        placeholder={placeholder}
+                      />
+                    ) : (
+                      <Input
+                        id={key}
+                        value={emailTemplates[key] ?? ""}
+                        onChange={(e) =>
+                          setEmailTemplates((prev) => ({ ...prev, [key]: e.target.value }))
+                        }
+                        className="text-sm"
+                        placeholder={placeholder}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+              <Button
+                onClick={handleSaveEmailTemplates}
+                disabled={savingEmail}
+                className="bg-mr-navy hover:bg-mr-navy-light text-white cursor-pointer"
+              >
+                {savingEmail ? "Kaydediliyor..." : "E-posta Şablonlarını Kaydet"}
+              </Button>
             </CardContent>
           </Card>
         </div>

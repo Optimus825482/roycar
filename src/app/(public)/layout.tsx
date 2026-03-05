@@ -48,7 +48,7 @@ export default function PublicLayout({
       </header>
 
       {/* Content */}
-      <main className="flex-1">{children}</main>
+      <main id="main-content" className="flex-1">{children}</main>
 
       {/* Footer */}
       <footer className="bg-mr-navy text-white/60 text-sm">

@@ -790,6 +790,8 @@ export function WizardContainer() {
                 <img
                   src={photoPreview}
                   alt="Aday fotoğrafı"
+                  width={96}
+                  height={128}
                   className="w-full h-full object-cover"
                 />
               </div>

@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { safeBigInt } from "@/lib/utils";
 
 // PATCH: Update manual note and/or final decision for one or more evaluations
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 },
-      );
-    }
+    const authResult = await requirePermission("evaluations");
+    if (!authResult.ok) return authResult.response;
 
     const body = await req.json();
     const { evaluationIds, manualNote, finalDecision } = body as {

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiError } from "@/lib/utils";
+import { requirePermission } from "@/lib/auth-helpers";
 import {
   parseCSV,
   parseXLSX,
@@ -10,9 +11,15 @@ import {
 } from "@/services/import.service";
 import type { RowDecision } from "@/services/import.service";
 
+// Maksimum yükleme boyutu: 10MB (veri aktarımı için)
+const MAX_IMPORT_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
 // POST /api/admin/import/upload — Dosya yükle, doğrula ve aktarım başlat
 export async function POST(req: NextRequest) {
   try {
+    const authResult = await requirePermission("data_import");
+    if (!authResult.ok) return authResult.response;
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const columnMappingStr = formData.get("columnMapping") as string | null;
@@ -21,6 +28,12 @@ export async function POST(req: NextRequest) {
     const rowDecisionsStr = formData.get("rowDecisions") as string | null;
 
     if (!file) return apiError("Dosya yüklenmedi.");
+    if (file.size > MAX_IMPORT_FILE_SIZE_BYTES) {
+      return apiError(
+        `Dosya boyutu 10MB sınırını aşıyor (${(file.size / 1024 / 1024).toFixed(1)}MB). Daha küçük bir dosya yükleyin.`,
+        400
+      );
+    }
 
     const fileName = file.name.toLowerCase();
     let headers: string[];
@@ -35,7 +48,7 @@ export async function POST(req: NextRequest) {
       headerRowIndex = parsed.headerRowIndex;
     } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
       const buffer = await file.arrayBuffer();
-      const parsed = parseXLSX(buffer);
+      const parsed = await parseXLSX(buffer);
       headers = parsed.headers;
       rows = parsed.rows;
       headerRowIndex = parsed.headerRowIndex;

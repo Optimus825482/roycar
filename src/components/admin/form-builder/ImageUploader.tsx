@@ -104,6 +104,8 @@ export function ImageUploader({
               <img
                 src={`/${img.filePath}`}
                 alt={img.fileName}
+                width={80}
+                height={80}
                 className="w-full h-full object-cover"
               />
               <button

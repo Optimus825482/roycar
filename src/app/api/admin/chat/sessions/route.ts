@@ -1,15 +1,17 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiError } from "@/lib/utils";
-import { auth } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth-helpers";
 import { createChatSession, getChatSessions } from "@/services/chat.service";
 
 // GET /api/admin/chat/sessions — Oturum listesi
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth();
+    const authResult = await requirePermission("ai_chat");
+    if (!authResult.ok) return authResult.response;
+
     const adminUsername =
-      (session?.user as { username?: string })?.username ||
+      (authResult.session.user as { username?: string })?.username ||
       req.headers.get("x-admin-username");
     if (!adminUsername) return apiError("Yetkisiz erişim.", 401);
     const admin = await prisma.adminUser.findUnique({
@@ -34,9 +36,11 @@ export async function GET(req: NextRequest) {
 // POST /api/admin/chat/sessions — Yeni oturum
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth();
+    const authResult = await requirePermission("ai_chat");
+    if (!authResult.ok) return authResult.response;
+
     const adminUsername =
-      (session?.user as { username?: string })?.username ||
+      (authResult.session.user as { username?: string })?.username ||
       req.headers.get("x-admin-username");
     if (!adminUsername) return apiError("Yetkisiz erişim.", 401);
     const admin = await prisma.adminUser.findUnique({

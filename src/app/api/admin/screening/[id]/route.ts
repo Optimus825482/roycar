@@ -1,12 +1,16 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiSuccess, apiError, safeBigInt } from "@/lib/utils";
+import { requireAuth, requirePermission } from "@/lib/auth-helpers";
 
 type Params = { params: Promise<{ id: string }> };
 
 // GET /api/admin/screening/:id — Kriter detayı
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
+    const authResult = await requireAuth();
+    if (!authResult.ok) return authResult.response;
+
     const { id } = await params;
     const cid = safeBigInt(id);
     if (!cid) return apiError("Geçersiz kriter ID", 400);
@@ -36,6 +40,9 @@ export async function GET(_req: NextRequest, { params }: Params) {
 // PUT /api/admin/screening/:id — Kriter güncelle
 export async function PUT(req: NextRequest, { params }: Params) {
   try {
+    const authResult = await requirePermission("screening");
+    if (!authResult.ok) return authResult.response;
+
     const { id } = await params;
     const body = await req.json();
     const {
@@ -85,6 +92,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
 // DELETE /api/admin/screening/:id — Kriter sil
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
+    const authResult = await requirePermission("screening");
+    if (!authResult.ok) return authResult.response;
+
     const { id } = await params;
     const did = safeBigInt(id);
     if (!did) return apiError("Geçersiz kriter ID", 400);

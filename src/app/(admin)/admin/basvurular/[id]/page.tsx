@@ -532,7 +532,7 @@ export default function ApplicationDetailPage() {
 
   return (
     <div
-      className="space-y-6 max-w-5xl mx-auto"
+      className="space-y-6 max-w-5xl mx-auto w-full min-w-0 overflow-x-hidden"
       role="main"
       aria-label="Aday profili"
     >
@@ -546,6 +546,8 @@ export default function ApplicationDetailPage() {
               <img
                 src={`/api/${app.photoPath}`}
                 alt={app.fullName}
+                width={64}
+                height={64}
                 className="w-full h-full rounded-full object-cover"
               />
             ) : (

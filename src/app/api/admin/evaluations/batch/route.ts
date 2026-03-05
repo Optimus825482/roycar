@@ -5,13 +5,16 @@ import {
   triggerEvaluation,
   type EvalCriteria,
 } from "@/services/evaluation.service";
-import { auth } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth-helpers";
 
 // POST /api/admin/evaluations/batch — Toplu AI değerlendirme başlat
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth();
-    const createdById = session?.user?.id ? BigInt(session.user.id) : undefined;
+    const authResult = await requirePermission("evaluations");
+    if (!authResult.ok) return authResult.response;
+    const createdById = authResult.session.user?.id
+      ? BigInt(authResult.session.user.id)
+      : undefined;
 
     const { applicationIds, departmentId, onlyNew, customCriteria, sessionId } =
       await req.json();
