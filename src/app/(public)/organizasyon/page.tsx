@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, memo } from "react";
+import { useEffect, useState, useCallback, memo, useRef } from "react";
 import {
   Users,
   Wine,
@@ -15,6 +15,7 @@ import {
   LayoutGrid,
   ListTree,
   Layers,
+  GitBranch,
 } from "lucide-react";
 
 // ─── Types ───
@@ -89,12 +90,13 @@ const LEVEL_CONFIG: Record<number, { label: string; color: string }> = {
   3: { label: "İcra", color: "#475569" },
 };
 
-type ViewMode = "tree" | "cards" | "grouped";
+type ViewMode = "tree" | "cards" | "grouped" | "mermaid";
 
 const VIEW_OPTIONS: { value: ViewMode; label: string; icon: typeof ListTree }[] = [
   { value: "tree", label: "Hiyerarşi", icon: ListTree },
   { value: "cards", label: "Kartlar", icon: LayoutGrid },
   { value: "grouped", label: "Kategoriler", icon: Layers },
+  { value: "mermaid", label: "Diyagram", icon: GitBranch },
 ];
 
 // ─── Tree Node Component ───
@@ -352,6 +354,120 @@ function GroupedView({
   );
 }
 
+// ─── Mermaid diagram: ağaçtan flowchart kodu + CDN ile render ───
+
+function escapeMermaidLabel(s: string): string {
+  return s.replace(/[[\]"]/g, (c) => (c === '"' ? "#quot;" : c === "[" ? "(" : ")")).replace(/\n/g, " ");
+}
+
+function buildMermaidFlowchart(tree: OrgPosition[]): string {
+  const lines: string[] = ["flowchart TB"];
+  let nodeIndex = 0;
+  const idMap = new Map<string, string>();
+
+  function walk(node: OrgPosition): string {
+    let id = idMap.get(node.id);
+    if (!id) {
+      id = `N${nodeIndex++}`;
+      idMap.set(node.id, id);
+      const label = node.incumbentName
+        ? `${node.title} · ${node.incumbentName}`
+        : node.title;
+      const safe = escapeMermaidLabel(label);
+      lines.push(`  ${id}["${safe}"]`);
+    }
+    if (node.children?.length) {
+      for (const child of node.children) {
+        const childId = walk(child);
+        lines.push(`  ${id} --> ${childId}`);
+      }
+    }
+    return id;
+  }
+
+  for (const root of tree) {
+    walk(root);
+  }
+  return lines.join("\n");
+}
+
+const MERMAID_CDN =
+  "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js";
+
+function MermaidDiagramView({ code }: { code: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!code || !containerRef.current) return;
+
+    const run = () => {
+      const mermaid = (window as unknown as { mermaid?: { run: (opts?: { nodes?: HTMLElement[] }) => Promise<void>; initialize: (c: object) => void } }).mermaid;
+      if (!mermaid) return;
+      setStatus("loading");
+      const el = document.createElement("div");
+      el.className = "mermaid";
+      el.textContent = code;
+      containerRef.current.innerHTML = "";
+      containerRef.current.appendChild(el);
+      mermaid
+        .run({ nodes: [el] })
+        .then(() => setStatus("ready"))
+        .catch((err: Error) => {
+          setStatus("error");
+          setErrorMsg(err.message || "Diyagram çizilemedi.");
+        });
+    };
+
+    if ((window as unknown as { mermaid?: unknown }).mermaid) {
+      run();
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = MERMAID_CDN;
+    script.async = true;
+    script.onload = () => {
+      const m = (window as unknown as { mermaid?: { initialize: (c: object) => void } }).mermaid;
+      m?.initialize({ startOnLoad: false, flowchart: { useMaxWidth: true } });
+      run();
+    };
+    script.onerror = () => {
+      setStatus("error");
+      setErrorMsg("Mermaid kütüphanesi yüklenemedi.");
+    };
+    document.head.appendChild(script);
+    return () => {
+      script.remove();
+    };
+  }, [code]);
+
+  if (status === "error") {
+    return (
+      <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-800">
+        <p className="font-medium">Diyagram yüklenemedi</p>
+        {errorMsg && <p className="mt-1">{errorMsg}</p>}
+        <pre className="mt-3 p-3 bg-white rounded border border-red-100 text-xs overflow-x-auto max-h-48">
+          {code}
+        </pre>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-w-0 overflow-x-auto">
+      <div ref={containerRef} className="mermaid-container flex justify-center py-4" />
+      {status === "loading" && (
+        <div className="flex items-center justify-center gap-2 py-8 text-mr-text-muted text-sm">
+          <div className="w-5 h-5 border-2 border-mr-gold/30 border-t-mr-gold rounded-full animate-spin" />
+          Diyagram çiziliyor...
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ───
 
 export default function OrganizasyonPage() {
@@ -545,6 +661,10 @@ export default function OrganizasyonPage() {
 
               {viewMode === "grouped" && (
                 <GroupedView flat={flat} categoryStats={categoryStats} />
+              )}
+
+              {viewMode === "mermaid" && (
+                <MermaidDiagramView code={buildMermaidFlowchart(tree)} />
               )}
             </div>
           </div>
