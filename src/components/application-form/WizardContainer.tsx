@@ -525,7 +525,7 @@ export function WizardContainer() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Adınız ve soyadınız"
-              className="mt-1 h-12 text-base"
+              className="mt-1 h-12 text-base text-mr-text-primary bg-white border-border focus-visible:ring-mr-gold/30"
               required
               aria-required="true"
             />
@@ -545,7 +545,7 @@ export function WizardContainer() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="ornek@email.com"
-              className="mt-1 h-12 text-base"
+              className="mt-1 h-12 text-base text-mr-text-primary bg-white border-border focus-visible:ring-mr-gold/30"
               required
               aria-required="true"
             />
@@ -565,7 +565,7 @@ export function WizardContainer() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+90 5XX XXX XX XX"
-              className="mt-1 h-12 text-base"
+              className="mt-1 h-12 text-base text-mr-text-primary bg-white border-border focus-visible:ring-mr-gold/30"
               required
               aria-required="true"
             />

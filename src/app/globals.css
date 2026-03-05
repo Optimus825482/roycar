@@ -154,6 +154,13 @@ h6 {
   body {
     @apply bg-background text-foreground;
   }
+  /* Autofill: yazı rengi kalıtımlı kalsın (kontrast kaybolmasın) */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-text-fill-color: currentColor;
+  }
 }
 
 /* ─── F&B Career System Loading Animations ─── */
