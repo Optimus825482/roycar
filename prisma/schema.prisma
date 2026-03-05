@@ -474,6 +474,7 @@ model OrgPosition {
   skills            Json?    // { management: 0-100, technical: 0-100, social: 0-100, physical: 0-100, crisis: 0-100 }
   sortOrder         Int      @default(0) @map("sort_order")
   isActive          Boolean  @default(true) @map("is_active")
+  incumbentName     String?  @map("incumbent_name") // Mevcut görevli(ler) — tek isim veya virgülle ayrılmış
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz
 

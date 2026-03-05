@@ -50,6 +50,7 @@ type OrgPosition = {
   skills: Record<string, number> | null;
   sortOrder: number;
   isActive: boolean;
+  incumbentName: string | null;
 };
 
 type TreePosition = OrgPosition & { children: TreePosition[] };
@@ -141,6 +142,7 @@ const EMPTY_FORM = {
   teamSize: 1,
   skills: { management: 0, technical: 0, social: 0, physical: 0, crisis: 0 },
   sortOrder: 0,
+  incumbentName: "",
 };
 
 // Template seçmeden özel pozisyon oluşturmak için sabit
@@ -333,6 +335,15 @@ function DetailPanel({
           </p>
         )}
 
+        {position.incumbentName && (
+          <div className="text-xs">
+            <div className="text-gray-600">Mevcut görevli(ler)</div>
+            <div className="font-medium text-gray-800 mt-0.5">
+              {position.incumbentName}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div className="bg-gray-50 rounded-lg px-3 py-2">
             <div className="text-gray-600">Kategori</div>
@@ -485,6 +496,7 @@ export default function AdminOrgChartPage() {
           ...(tpl.skills as Record<string, number>),
         },
         sortOrder: tpl.sortOrder,
+        incumbentName: "",
       });
     },
     [templates],
@@ -528,6 +540,7 @@ export default function AdminOrgChartPage() {
       teamSize: p.teamSize,
       skills: { ...EMPTY_FORM.skills, ...(p.skills as Record<string, number>) },
       sortOrder: p.sortOrder,
+      incumbentName: p.incumbentName ?? "",
     });
     setSelectedPosition(null);
     setDialogOpen(true);
@@ -625,7 +638,7 @@ export default function AdminOrgChartPage() {
           </Button>
           <a href="/organizasyon" target="_blank" rel="noopener noreferrer">
             <Button size="sm" variant="outline" className="gap-1">
-              <ExternalLink className="w-4 h-4" /> Önizle
+              <ExternalLink className="w-4 h-4" /> Önizlemeyi aç
             </Button>
           </a>
         </div>
@@ -824,6 +837,20 @@ export default function AdminOrgChartPage() {
                     onChange={(e) =>
                       setForm({ ...form, description: e.target.value })
                     }
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">
+                    Mevcut görevli(ler) — İsim / İsimler
+                  </label>
+                  <Input
+                    value={form.incumbentName}
+                    onChange={(e) =>
+                      setForm({ ...form, incumbentName: e.target.value })
+                    }
+                    placeholder="Örn: Ahmet Yılmaz veya virgülle ayırarak birden fazla isim"
+                    className="text-sm"
                   />
                 </div>
 

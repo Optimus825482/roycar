@@ -358,5 +358,14 @@ h6 {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   ORGANİZASYON ŞEMASI — Artık pure Tailwind, ek CSS yok
+   ORGANİZASYON ŞEMASI — Önizleme yazdırma
    ═══════════════════════════════════════════════════════════════ */
+@media print {
+  .org-chart-preview button[type="button"] {
+    display: none;
+  }
+  .org-chart-preview {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
       teamSize,
       skills,
       sortOrder,
+      incumbentName,
     } = body;
 
     if (!title || typeof title !== "string") {
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
         teamSize: teamSize || 1,
         skills: skills || null,
         sortOrder: sortOrder || 0,
+        incumbentName: incumbentName?.trim() || null,
       },
     });
 

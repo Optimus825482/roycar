@@ -22,6 +22,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
       skills,
       sortOrder,
       isActive,
+      incumbentName,
     } = body;
 
     const pid = safeBigInt(id);
@@ -46,6 +47,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
         ...(skills !== undefined && { skills }),
         ...(sortOrder !== undefined && { sortOrder }),
         ...(isActive !== undefined && { isActive }),
+        ...(incumbentName !== undefined && {
+          incumbentName: incumbentName?.trim() || null,
+        }),
       },
     });
 

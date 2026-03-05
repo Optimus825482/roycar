@@ -29,6 +29,7 @@ type OrgPosition = {
   teamSize: number;
   skills: Record<string, number> | null;
   sortOrder: number;
+  incumbentName?: string | null;
   children: OrgPosition[];
 };
 
@@ -116,8 +117,9 @@ const TreeNode = memo(function TreeNode({
         onClick={() => hasChildren && setOpen(!open)}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        role={hasChildren ? "button" : undefined}
+        role="treeitem"
         aria-expanded={hasChildren ? open : undefined}
+        aria-label={node.incumbentName ? `${node.title}, Mevcut: ${node.incumbentName}` : node.title}
       >
         {/* Expand/collapse toggle */}
         <div className="w-5 h-5 flex items-center justify-center shrink-0">
@@ -143,9 +145,9 @@ const TreeNode = memo(function TreeNode({
           <Icon className="w-3.5 h-3.5" style={{ color: cat.color }} />
         </div>
 
-        {/* Title + English */}
+        {/* Title + English + Mevcut görevli */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-gray-900 truncate">
               {node.title}
             </span>
@@ -155,6 +157,11 @@ const TreeNode = memo(function TreeNode({
               </span>
             )}
           </div>
+          {node.incumbentName && (
+            <div className="text-xs text-gray-600 mt-0.5 truncate">
+              Mevcut: {node.incumbentName}
+            </div>
+          )}
         </div>
 
         {/* Badges */}
@@ -268,13 +275,13 @@ export default function OrganizasyonPage() {
     .filter((c) => c.count > 0);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 w-full min-w-0 overflow-x-hidden org-chart-preview">
       {/* Header */}
       <div className="bg-[#0F4C75] text-white">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex items-center gap-3 mb-2">
-            <Building2 className="w-6 h-6 text-[#FF9F1C]" />
-            <h1 className="text-xl font-bold tracking-wide">
+            <Building2 className="w-6 h-6 text-[#FF9F1C] shrink-0" aria-hidden />
+            <h1 className="text-xl font-bold tracking-wide font-heading">
               {settings.title || "F&B Organizasyon Yapısı"}
             </h1>
           </div>
@@ -329,23 +336,32 @@ export default function OrganizasyonPage() {
         </div>
 
         {/* Org Tree */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
-            <div className="w-1 h-4 bg-[#FF9F1C] rounded-full" />
-            <h2 className="text-sm font-bold text-[#0F4C75]">
-              Organizasyon Hiyerarşisi
-            </h2>
-            <span className="text-[10px] text-gray-600 ml-auto">
-              Tıklayarak açıp kapatabilirsiniz
-            </span>
-          </div>
+        <section aria-label="Organizasyon hiyerarşisi">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <div className="flex flex-wrap items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+              <div className="w-1 h-4 bg-[#FF9F1C] rounded-full shrink-0" />
+              <h2 className="text-sm font-bold text-[#0F4C75] font-heading">
+                Organizasyon Hiyerarşisi
+              </h2>
+              <span className="text-[10px] text-gray-600 ml-auto">
+                Tıklayarak açıp kapatabilirsiniz
+              </span>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="ml-auto sm:ml-0 text-xs text-[#0F4C75] hover:text-[#FF9F1C] font-medium underline focus:outline-none focus:ring-2 focus:ring-[#FF9F1C] focus:ring-offset-1 rounded px-2 py-1"
+              >
+                Yazdır
+              </button>
+            </div>
 
-          <div className="space-y-0">
-            {tree.map((root) => (
-              <TreeNode key={root.id} node={root} defaultOpen />
-            ))}
+            <div className="space-y-0" role="tree" aria-label="Pozisyon ağacı">
+              {tree.map((root) => (
+                <TreeNode key={root.id} node={root} defaultOpen />
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
 
         {/* Level breakdown */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
