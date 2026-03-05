@@ -431,7 +431,18 @@ function MermaidDiagramView({ code }: { code: string }) {
     script.async = true;
     script.onload = () => {
       const m = (window as unknown as { mermaid?: { initialize: (c: object) => void } }).mermaid;
-      m?.initialize({ startOnLoad: false, flowchart: { useMaxWidth: true } });
+      m?.initialize({
+        startOnLoad: false,
+        flowchart: {
+          useMaxWidth: false,
+          nodeSpacing: 80,
+          rankSpacing: 70,
+        },
+        themeVariables: {
+          fontSize: "16px",
+          fontFamily: "inherit",
+        },
+      });
       run();
     };
     script.onerror = () => {
@@ -457,8 +468,11 @@ function MermaidDiagramView({ code }: { code: string }) {
   }
 
   return (
-    <div className="min-w-0 overflow-x-auto">
-      <div ref={containerRef} className="mermaid-container flex justify-center py-4" />
+    <div className="min-w-0 overflow-x-auto w-full">
+      <div
+        ref={containerRef}
+        className="mermaid-diagram-wrap flex justify-center py-4 min-h-[320px]"
+      />
       {status === "loading" && (
         <div className="flex items-center justify-center gap-2 py-8 text-mr-text-muted text-sm">
           <div className="w-5 h-5 border-2 border-mr-gold/30 border-t-mr-gold rounded-full animate-spin" />

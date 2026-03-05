@@ -358,6 +358,26 @@ h6 {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   ORGANİZASYON ŞEMASI — Mermaid diyagram boyutu
+   ═══════════════════════════════════════════════════════════════ */
+.mermaid-diagram-wrap {
+  width: 100%;
+  min-width: 720px;
+}
+.mermaid-diagram-wrap svg {
+  min-width: 720px;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+}
+/* Mermaid iç div (diagram wrapper) da genişlesin */
+.mermaid-diagram-wrap .mermaid {
+  min-width: 720px;
+  display: flex;
+  justify-content: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════
    ORGANİZASYON ŞEMASI — Önizleme yazdırma
    ═══════════════════════════════════════════════════════════════ */
 @media print {
