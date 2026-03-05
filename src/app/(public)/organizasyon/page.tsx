@@ -400,7 +400,8 @@ function MermaidDiagramView({ code }: { code: string }) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!code || !containerRef.current) return;
+    const container = containerRef.current;
+    if (!code || !container) return;
 
     const run = () => {
       const mermaid = (window as unknown as { mermaid?: { run: (opts?: { nodes?: HTMLElement[] }) => Promise<void>; initialize: (c: object) => void } }).mermaid;
@@ -409,8 +410,8 @@ function MermaidDiagramView({ code }: { code: string }) {
       const el = document.createElement("div");
       el.className = "mermaid";
       el.textContent = code;
-      containerRef.current.innerHTML = "";
-      containerRef.current.appendChild(el);
+      container.innerHTML = "";
+      container.appendChild(el);
       mermaid
         .run({ nodes: [el] })
         .then(() => setStatus("ready"))
