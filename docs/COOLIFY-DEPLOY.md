@@ -2,11 +2,21 @@
 
 ## Aynı projede App + Postgres (iki ayrı container)
 
-Uygulama ve PostgreSQL aynı projede ayrı container olarak deploy ediliyorsa, Coolify'ın veritabanı için ürettiği kullanıcı/şifre **uygulama container'ına** da geçmeli. `docker-compose.yaml` artık şu env'leri **dışarıdan** alacak şekilde ayarlı:
+Compose artık **yereldekiyle aynı** varsayılanları kullanıyor: kullanıcı `postgres`, şifre `518518Erkan`, veritabanı adı `royal_careerdb`. Böylece hem yerel hem Coolify aynı bağlantıyı kullanabilir.
 
-- `DATABASE_URL` veya `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
+### Coolify'da ilk kez veya şifre uyumsuzsa
 
-**Coolify'da yapmanız gereken:** Projede veritabanını uygulamaya **bağlayın** (link / connect database to application). Coolify bu bağlantıyı kurunca genelde `DATABASE_URL` (veya `DB_*`) değişkenlerini uygulama servisine otomatik enjekte eder. Böylece app container, Postgres container'ın gerçek kullanıcı/şifresiyle bağlanır. Bağlamayı yaptıktan sonra projeyi yeniden deploy edin.
+1. **Postgres volume daha önce oluşturulduysa** (logda "Skipping initialization" görüyorsanız) Postgres ilk açılışta kullandığı şifre hâlâ geçerli; yeni `POSTGRES_PASSWORD` okunmaz. İki seçenek:
+   - **A)** Coolify'da Postgres servisinin **volume'unu silin**, sonra projeyi yeniden deploy edin. Bu sefer Postgres `POSTGRES_PASSWORD=518518Erkan` ve `POSTGRES_DB=royal_careerdb` ile ilklenecek; uygulama da aynı değerlerle bağlanacak.
+   - **B)** Mevcut Postgres şifresini değiştirmeyin; Coolify'da **Application** → Environment Variables'a gidip `DATABASE_URL` veya `DB_PASSWORD` + `DB_NAME` değerlerini, Postgres sayfasında gördüğünüz kullanıcı/şifre/veritabanı ile aynı yapın.
+
+2. **Proje ilk kez deploy ediliyorsa** compose'taki varsayılanlar (`518518Erkan`, `royal_careerdb`) kullanılır; ekstra env tanımlamanıza gerek yok. Sadece deploy edin.
+
+3. İsterseniz Coolify'da tüm proje için şu env'leri tek yerde tanımlayabilirsiniz (opsiyonel; varsayılanlar zaten bunlar):
+   - `POSTGRES_DB=royal_careerdb`
+   - `POSTGRES_PASSWORD=518518Erkan`
+   - `DB_NAME=royal_careerdb`
+   - `DB_PASSWORD=518518Erkan`
 
 ---
 

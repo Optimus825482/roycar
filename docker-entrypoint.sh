@@ -3,10 +3,10 @@ set -e
 
 echo "=== F&B Career System — Starting ==="
 
-# Runtime: Coolify/Prod must set DATABASE_URL (or DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT)
-: "${DB_NAME:=fb_careerdb}"
+# Varsayılanlar compose ile aynı (postgres / 518518Erkan / royal_careerdb)
+: "${DB_NAME:=royal_careerdb}"
 : "${DB_USER:=postgres}"
-: "${DB_PASSWORD:=postgres}"
+: "${DB_PASSWORD:=518518Erkan}"
 
 # Build DATABASE_URL from DB_* if not explicitly provided
 if [ -z "${DATABASE_URL:-}" ]; then
@@ -29,7 +29,7 @@ DB_NAME_FOR_READY=$(echo "$DATABASE_URL" | sed -n 's|.*/\([^?]*\).*|\1|p')
 DB_HOST_FOR_READY=${DB_HOST_FOR_READY:-db}
 DB_PORT_FOR_READY=${DB_PORT_FOR_READY:-5432}
 DB_USER_FOR_READY=${DB_USER_FOR_READY:-postgres}
-DB_NAME_FOR_READY=${DB_NAME_FOR_READY:-fb_careerdb}
+DB_NAME_FOR_READY=${DB_NAME_FOR_READY:-royal_careerdb}
 
 echo ">>> Waiting for PostgreSQL..."
 for i in $(seq 1 60); do

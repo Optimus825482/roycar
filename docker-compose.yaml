@@ -7,13 +7,13 @@ services:
     ports:
       - "15432:5432"
     environment:
-      POSTGRES_DB: fb_careerdb
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-royal_careerdb}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-518518Erkan}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d fb_careerdb"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB:-royal_careerdb}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -33,13 +33,13 @@ services:
       HOSTNAME: 0.0.0.0
       NEXTAUTH_URL: https://royalcareer.erkanerdem.net
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-me-to-a-secure-random-string}
-      # Coolify aynı projede DB oluşturduğunda bu değişkenleri enjekte eder; yoksa yerel varsayılanlar
+      # Yerel ile aynı: postgres / 518518Erkan / royal_careerdb (Coolify'da da bu env'leri kullanın)
       DB_HOST: ${DB_HOST:-db}
       DB_PORT: ${DB_PORT:-5432}
-      DB_NAME: ${DB_NAME:-fb_careerdb}
+      DB_NAME: ${DB_NAME:-royal_careerdb}
       DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/fb_careerdb}
+      DB_PASSWORD: ${DB_PASSWORD:-518518Erkan}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:518518Erkan@db:5432/royal_careerdb}
     expose:
       - "3000"
     healthcheck:
