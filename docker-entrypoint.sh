@@ -3,7 +3,7 @@ set -e
 
 echo "=== F&B Career System — Starting ==="
 
-# Runtime defaults (can be overridden by environment)
+# Runtime: Coolify/Prod must set DATABASE_URL (or DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT)
 : "${DB_NAME:=fb_careerdb}"
 : "${DB_USER:=postgres}"
 : "${DB_PASSWORD:=postgres}"
@@ -13,8 +13,12 @@ if [ -z "${DATABASE_URL:-}" ]; then
   : "${DB_HOST:=db}"
   : "${DB_PORT:=5432}"
   export DATABASE_URL="postgresql://$DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME"
+  echo ">>> DATABASE_URL built from DB_* (host=$DB_HOST user=$DB_USER). Set DATABASE_URL in Coolify if auth fails."
 fi
 
+# Mask URL for logs (show only scheme and host)
+DB_LOG=$(echo "$DATABASE_URL" | sed 's|://[^@]*@|://***@|')
+echo ">>> Using database: $DB_LOG"
 echo "DATABASE_URL=\"$DATABASE_URL\"" > /app/.env.local
 
 DB_HOST_FOR_READY=$(echo "$DATABASE_URL" | sed -n 's|.*@\([^:/?]*\).*|\1|p')

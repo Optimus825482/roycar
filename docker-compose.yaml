@@ -33,12 +33,13 @@ services:
       HOSTNAME: 0.0.0.0
       NEXTAUTH_URL: https://royalcareer.erkanerdem.net
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-me-to-a-secure-random-string}
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: fb_careerdb
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/fb_careerdb
+      # Coolify aynı projede DB oluşturduğunda bu değişkenleri enjekte eder; yoksa yerel varsayılanlar
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-fb_careerdb}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/fb_careerdb}
     expose:
       - "3000"
     healthcheck:
